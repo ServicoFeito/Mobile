@@ -84,7 +84,7 @@ integração com a API C# e AWS, observabilidade com APM externo.
 | Componentes | Atomic Design em `src/shared/components` |
 | Segredos de servidor | Supabase secrets (`supabase secrets set`) |
 | Segredos públicos do app | `.env` com prefixo `EXPO_PUBLIC_` |
-| Testes | Jest (`jest-expo`) + Testing Library; `deno test`; pgTAP (`supabase db test`) |
+| Testes | Jest (`jest-expo`) + Testing Library; `deno test`; pgTAP via runner Node (`pg`) contra o projeto dev |
 
 ### Abordagem escolhida: RLS + Edge Functions nos fluxos críticos
 
@@ -148,8 +148,21 @@ numa única pasta em `docs/arquitetura-antiga/`, removendo `.git` aninhado, `bui
 
 Dois projetos alimentados pelas mesmas migrations:
 
-- **dev**: usado no desenvolvimento; chaves limpas; alvo de `supabase gen types` e do CI.
+- **dev** (`servico-feito-dev`): usado no desenvolvimento; chaves limpas; alvo de
+  `supabase gen types --linked` e do CI.
 - **prod**: criado no lançamento; recebe as migrations aprovadas.
+
+**Sem stack Supabase local (decisão do usuário, 2026-09-08).** Não se usa Docker
+nem Postgres local. O desenvolvimento e o CI trabalham direto contra o projeto
+**dev** na nuvem:
+
+- Migrations aplicadas com `supabase db push --linked` (forward-only).
+- pgTAP roda por um runner Node (`supabase/tests/run.mjs`, client `pg`) que executa
+  cada `supabase/tests/*.test.sql` contra a connection string do dev; cada arquivo
+  fica em `begin … select * from finish(); rollback;`, então não persiste dados.
+- Lint de esquema: `supabase db advisors --linked` no lugar de `supabase db lint`.
+- `supabase/config.toml` existe (para `supabase init` / `migration new` / `db push`),
+  mas nada de `supabase start`.
 
 O projeto Supabase antigo (`yaqmivazqarfkggypuow`) é descartado. Qualquer credencial
 presente no código Kotlin do repositório é considerada comprometida.
@@ -481,14 +494,14 @@ repositório Kotlin devem ser rotacionados antes de qualquer uso (ver seção 5)
 | hooks (`useXxx`) | Jest + Testing Library + `QueryClientProvider` de teste | `queryKey`, invalidação, estados de loading/erro |
 | stores (`authStore`, `uiModeStore`) | Jest | hidratação, transições |
 | Edge Functions | `deno test` | fluxo `aceitar-proposta`, parsing do webhook, convenção de `txid`, idempotência |
-| RLS | pgTAP (`supabase db test`) | isolamento por participante; bloqueio de INSERT em `contratacoes`; escopo de notificações |
+| RLS | pgTAP via runner Node (`pg`) contra o dev | isolamento por participante; bloqueio de INSERT em `contratacoes`; escopo de notificações |
 | screens | Jest | somente quando a tela tem lógica condicional própria |
 
 Regra: hook, service/repository ou Edge Function novo ou alterado sem teste
 correspondente não é considerado pronto.
 
-CI (GitHub Actions): `pnpm test`, `supabase db test`, `deno test`,
-`tsc --noEmit`, lint.
+CI (GitHub Actions): `pnpm test`, runner pgTAP Node contra o dev + `supabase db diff
+--linked` vazio + `supabase db advisors --linked`, `deno test`, `tsc --noEmit`, lint.
 
 ---
 
