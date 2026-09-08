@@ -4,7 +4,7 @@
 
 | Branch | Papel | Regras |
 |---|---|---|
-| `main` | Produção | Protegida. Só recebe merge de `homolog` via PR. Deploy de prod parte daqui. |
+| `main` | Produção | Protegida a partir do 1º release. **Até lá, `main` acompanha `homolog`** (mesmo conteúdo) para servir de branch default de clone com o projeto completo. |
 | `homolog` | Homologação / staging | Tudo passa por aqui antes de `main`. Feature branches fazem PR para `homolog`. |
 | `<feature>` | Trabalho em andamento | Ex.: `fundacao-monorepo-supabase`. Criada a partir de `homolog`. PR para `homolog` quando o plano/tarefa fecha. |
 
