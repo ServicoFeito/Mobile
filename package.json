@@ -7,15 +7,16 @@
   },
   "scripts": {
     "supabase": "supabase",
-    "db:start": "supabase start",
-    "db:stop": "supabase stop",
-    "db:reset": "supabase db reset",
-    "db:test": "supabase test db",
-    "db:lint": "supabase db lint --level error",
-    "db:types": "supabase gen types typescript --local > packages/db-types/index.ts",
-    "db:new": "supabase migration new"
+    "db:link": "supabase link --project-ref $SUPABASE_PROJECT_REF",
+    "db:new": "supabase migration new",
+    "db:push": "supabase db push --linked",
+    "db:diff": "supabase db diff --linked",
+    "db:advisors": "supabase db advisors --linked",
+    "db:test": "node supabase/tests/run.mjs",
+    "db:types": "supabase gen types typescript --linked > packages/db-types/index.ts"
   },
   "devDependencies": {
-    "supabase": "^1.207.9"
+    "pg": "^8.13.1",
+    "supabase": "^2.19.7"
   }
 }
