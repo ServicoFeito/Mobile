@@ -1,7 +1,11 @@
 -- Schema de apoio a testes pgTAP.
--- Enviado a todos os ambientes; anon/authenticated recebem USAGE/EXECUTE porque os
--- testes RLS impersonam esses papéis (padrão basejump supabase_test_helpers).
--- TODO(release-prod): mover para mecanismo local-only quando houver deploy de prod.
+-- Enviado a todos os ambientes. anon/authenticated recebem USAGE no schema e EXECUTE
+-- APENAS nos dois helpers read-only (get_supabase_uid, rls_enabled), porque os testes
+-- RLS impersonam esses papéis. create_supabase_user / authenticate_as /
+-- clear_authentication ficam sem EXECUTE para anon/authenticated e para PUBLIC —
+-- só o papel de migração/runner (postgres) os chama.
+-- TODO(release-prod): schema tests NÃO deve chegar em prod via migration history —
+-- ver docs/superpowers/plans/2026-09-08-fundacao-checklist-operacional.md.
 create schema if not exists tests;
 
 create or replace function tests.create_supabase_user(identifier text)
@@ -33,7 +37,10 @@ as $$
 $$;
 
 -- security invoker (sem "security definer"): Postgres proíbe alterar o parâmetro
--- "role" dentro de uma função security definer.
+-- "role" dentro de uma função security definer. Por isso a leitura de auth.users é
+-- delegada ao helper SECURITY DEFINER tests.get_supabase_uid — assim authenticate_as
+-- funciona mesmo quando o papel corrente já é anon/authenticated (idioma basejump:
+-- clear_authentication() -> authenticate_as('b'), ou authenticate_as encadeado).
 create or replace function tests.authenticate_as(identifier text)
 returns void
 language plpgsql
@@ -42,7 +49,7 @@ as $$
 declare
   v_id uuid;
 begin
-  select id into v_id from auth.users where email = identifier || '@test.local' limit 1;
+  v_id := tests.get_supabase_uid(identifier);
   if v_id is null then
     raise exception 'usuário de teste "%" não existe (chame tests.create_supabase_user primeiro)', identifier;
   end if;
@@ -77,8 +84,11 @@ as $$
   where n.nspname = schema_name and c.relname = table_name;
 $$;
 
--- Os testes RLS chamam tests.* enquanto impersonam anon/authenticated, então esses
--- papéis precisam de USAGE no schema e EXECUTE nas funções. public continua sem EXECUTE.
-grant usage on schema tests to anon, authenticated;
+-- PUBLIC perde EXECUTE nos 5 helpers já criados (o revoke abaixo) e nos futuros
+-- (o alter default privileges). anon/authenticated ganham USAGE no schema e EXECUTE
+-- só nos dois helpers read-only usados durante os testes RLS impersonados.
+revoke execute on all functions in schema tests from public, anon, authenticated;
 alter default privileges in schema tests revoke execute on functions from public;
-grant execute on all functions in schema tests to anon, authenticated;
+grant usage on schema tests to anon, authenticated;
+grant execute on function tests.get_supabase_uid(text) to anon, authenticated;
+grant execute on function tests.rls_enabled(text, text) to anon, authenticated;

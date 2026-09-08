@@ -26,3 +26,12 @@ Nenhuma bloqueia os Planos 2–5. As de pagamento bloqueiam o Plano 6.
 - [ ] Guardar os valores novos apenas como Supabase secrets no Plano 6
       (`EFI_CLIENT_ID`, `EFI_CLIENT_SECRET`, `EFI_CERT_P12_BASE64`, `EFI_WEBHOOK_TOKEN`,
       `PLATFORM_PIX_KEY`). Nunca no repositório.
+
+## Schema tests (pgTAP)
+
+- [ ] Antes de criar o projeto **prod**: o schema `tests` (helpers pgTAP) NÃO deve
+      chegar em prod via migration history. Decidir entre (i) migration de teardown
+      só-prod (`drop schema tests cascade`) ou (ii) mover os helpers para um setup
+      aplicado pelo runner de testes (`supabase/tests/run.mjs`), fora do histórico
+      de migrations. `create_supabase_user`/`authenticate_as` escrevem em `auth.users`
+      e não podem ficar executáveis em prod.
