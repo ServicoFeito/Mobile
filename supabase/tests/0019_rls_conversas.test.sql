@@ -9,9 +9,12 @@ select tests.create_supabase_user('c_preB');
 insert into public.conversas (id, tipo, cliente_id, prestador_id)
 values ('dddddddd-0000-0000-0000-000000000019', 'DIRETA',
         tests.get_supabase_uid('c_cli'), tests.get_supabase_uid('c_preA'));
+-- participantes_conversa agora e populado pelo trigger F-I9 (on_conversa_created);
+-- este insert vira redundante -> on conflict do nothing evita colisao de PK.
 insert into public.participantes_conversa (conversa_id, usuario_id, papel) values
   ('dddddddd-0000-0000-0000-000000000019', tests.get_supabase_uid('c_cli'),  'CLIENTE'),
-  ('dddddddd-0000-0000-0000-000000000019', tests.get_supabase_uid('c_preA'), 'PRESTADOR');
+  ('dddddddd-0000-0000-0000-000000000019', tests.get_supabase_uid('c_preA'), 'PRESTADOR')
+on conflict (conversa_id, usuario_id) do nothing;
 insert into public.mensagens (conversa_id, remetente_id, corpo)
 values ('dddddddd-0000-0000-0000-000000000019', tests.get_supabase_uid('c_cli'), 'ola A');
 
