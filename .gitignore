@@ -13,11 +13,18 @@ node_modules/
 supabase/.branches/
 supabase/.temp/
 
-# expo (Plano 2)
+# expo
 apps/mobile/.expo/
 apps/mobile/dist/
+
+# worktrees
+.worktrees/
+
+# artefatos locais / referência (não versionar)
+/env/
+/servico-feito/
+/docs/arquitetura-antiga/
 
 # os
 .DS_Store
 Thumbs.db
-.worktrees/
