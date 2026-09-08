@@ -1,1 +1,23 @@
+# deps
+node_modules/
+
+# env / segredos — NUNCA commitar
+.env
+.env.*
+!.env.example
+*.p12
+*.pem
+*.key
+
+# supabase local
+supabase/.branches/
+supabase/.temp/
+
+# expo (Plano 2)
+apps/mobile/.expo/
+apps/mobile/dist/
+
+# os
+.DS_Store
+Thumbs.db
 .worktrees/
