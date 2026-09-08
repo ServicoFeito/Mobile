@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "pg": "^8.13.1",
-    "supabase": "^2.19.7"
+    "supabase": "^2.19.7",
+    "typescript": "^5"
   }
 }
