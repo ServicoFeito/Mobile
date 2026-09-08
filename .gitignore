@@ -1,1 +1,30 @@
+# deps
+node_modules/
+
+# env / segredos — NUNCA commitar
+.env
+.env.*
+!.env.example
+*.p12
+*.pem
+*.key
+
+# supabase local
+supabase/.branches/
+supabase/.temp/
+
+# expo
+apps/mobile/.expo/
+apps/mobile/dist/
+
+# worktrees
 .worktrees/
+
+# artefatos locais / referência (não versionar)
+/env/
+/servico-feito/
+/docs/arquitetura-antiga/
+
+# os
+.DS_Store
+Thumbs.db
