@@ -4,9 +4,17 @@
 
 **Goal:** Entregar o monorepo pnpm e o banco de dados Supabase do Serviço Feito — esquema versionado em migrations, RLS em todas as tabelas, testes pgTAP passando localmente e em CI, e os tipos TypeScript do banco gerados — sem nenhum código de app ainda.
 
-**Architecture:** Monorepo pnpm com workspaces `apps/*` e `packages/*`. O diretório `supabase/` na raiz é a fonte da verdade do banco: migrations SQL ordenadas por timestamp, funções auxiliares para RLS, e testes pgTAP em `supabase/tests/`. Um esquema `tests` (apoio a pgTAP) é criado por migration e tem execução revogada de `anon`/`authenticated`. Os tipos do banco são gerados por `supabase gen types typescript` e commitados em `packages/db-types`. CI roda `supabase db lint`, `supabase test db` e confere que os tipos commitados estão atualizados.
+**Architecture:** Monorepo pnpm com workspaces `apps/*` e `packages/*`. O diretório `supabase/` na raiz é a fonte da verdade do banco: migrations SQL ordenadas por timestamp, funções auxiliares para RLS, e testes pgTAP em `supabase/tests/`. Um esquema `tests` (apoio a pgTAP) é criado por migration e tem execução revogada de `anon`/`authenticated`. Os tipos do banco são gerados por `supabase gen types typescript --linked` e commitados em `packages/db-types`.
 
-**Tech Stack:** pnpm 9, Node 20 LTS, Supabase CLI (via npm devDependency), PostgreSQL 15 (local via Docker), pgTAP, TypeScript 5 (strict), GitHub Actions.
+**SEM DOCKER / BANCO NA NUVEM (adendo 2026-09-08, aprovado pelo usuário — supersede partes do texto abaixo):**
+- Não há stack Supabase local. Nada de `supabase start` / `supabase stop` / `supabase db reset` / `supabase test db` / `supabase db lint` (todos exigem Docker).
+- Existe um projeto Supabase **dev** na nuvem (`servico-feito-dev`, ref em `SUPABASE_PROJECT_REF`). Migrations são aplicadas nele com `supabase db push --linked`.
+- pgTAP roda via um **runner Node** (`supabase/tests/run.mjs`, usa o client `pg`) que conecta em `SUPABASE_DB_URL` (connection string do dev), executa cada `supabase/tests/*.test.sql` (cada um já embrulhado em `begin … select * from finish(); rollback;`, então não persiste nada) e falha o processo em qualquer `not ok`.
+- Lint de esquema: `supabase db advisors --linked` (security + performance) no lugar de `supabase db lint`.
+- Onde o texto de uma Task disser `pnpm db:reset && pnpm db:test`, leia **`pnpm db:push && pnpm db:test`**.
+- Pré-requisitos (feitos fora do plano, pelo usuário, antes da Task 2): projeto `servico-feito-dev` criado; `supabase login` feito na máquina; `.env` na raiz com `SUPABASE_PROJECT_REF=<ref>` e `SUPABASE_DB_URL=<connection string do dev, role postgres>`. `.env` é git-ignored (Task 1).
+
+**Tech Stack:** pnpm 9, Node 20 LTS (host de dev roda Node 18 — WARN de engine é aceito), Supabase CLI 2.x (via npm devDependency), projeto Supabase cloud dev, client `pg` para o runner pgTAP, TypeScript 5 (strict), GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-09-08-migracao-react-native-supabase-design.md` (este plano implementa as seções 4, 6, 7 e a parte de `packages/db-types` da seção 8; a rotação de segredos da seção 5 aparece como item de checklist).
 
@@ -21,7 +29,8 @@
 - **RLS habilitada em todas as tabelas de `public`.** Tabela sem policy = acesso negado para `anon`/`authenticated` (o acesso de servidor usa `service_role`, que ignora RLS).
 - Funções `SECURITY DEFINER` sempre com `set search_path = ''` e referências totalmente qualificadas (`public.`, `auth.`).
 - Migrations são criadas com `supabase migration new <nome>` (gera o arquivo com timestamp). Este plano referencia cada migration pelo **sufixo** do nome; o timestamp é o que a CLI gerar.
-- Cada migration nova tem teste pgTAP correspondente em `supabase/tests/`. Migration ou função sem teste não é considerada pronta.
+- Aplicar migration + rodar testes = **`pnpm db:push && pnpm db:test`** (não há `pnpm db:reset`; não há banco local — ver adendo "SEM DOCKER" no topo). `pnpm db:push` aplica no projeto dev na nuvem apenas as migrations ainda não aplicadas; é forward-only. Se uma migration já aplicada precisar de conserto, ajustar o objeto direto no dev (SQL editor do dashboard ou `supabase db execute --linked`), corrigir o arquivo e seguir.
+- Cada migration nova tem teste pgTAP correspondente em `supabase/tests/`, rodado pelo runner Node contra o dev. Migration ou função sem teste não é considerada pronta.
 - Idioma de identificadores de domínio: português (`usuarios`, `demandas_servico`, ...). Rótulos de enum em `MAIÚSCULAS_COM_UNDERSCORE`.
 
 ---
@@ -75,7 +84,7 @@ Criados neste plano:
 
 **Interfaces:**
 - Consumes: nada.
-- Produces: workspace pnpm com o script `pnpm db:types`, `pnpm db:test`, `pnpm db:reset` e a CLI `supabase` disponível via `pnpm supabase ...`.
+- Produces: workspace pnpm com scripts `pnpm db:*` e a CLI `supabase` disponível via `pnpm supabase ...`. (Os nomes exatos dos scripts são finalizados na Task 2 Step 1 — ver adendo SEM DOCKER.)
 
 - [ ] **Step 1: Escrever `.node-version`**
 
@@ -120,6 +129,10 @@ Thumbs.db
 
 - [ ] **Step 4: Escrever `package.json` da raiz**
 
+> NOTA (adendo SEM DOCKER): o bloco `scripts` e `devDependencies` abaixo é
+> **superseded pela Task 2 Step 1** (Task 1 já foi executada com este conteúdo;
+> a Task 2 reescreve para o fluxo cloud sem Docker). Mantido aqui como histórico.
+
 ```json
 {
   "name": "servico-feito",
@@ -134,7 +147,7 @@ Thumbs.db
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:lint": "supabase db lint --level warning",
+    "db:lint": "supabase db lint --level error",
     "db:types": "supabase gen types typescript --local > packages/db-types/index.ts",
     "db:new": "supabase migration new"
   },
@@ -195,34 +208,156 @@ git commit -m "chore: esqueleto do monorepo pnpm + CLI supabase"
 
 ---
 
-## Task 2: Inicializar o Supabase local e o harness pgTAP
+## Task 2: Ligar ao projeto Supabase dev + harness pgTAP (runner Node) — SEM DOCKER
+
+Substitui a versão original (que usava `supabase start`). Ver adendo "SEM DOCKER" no topo.
+
+**Pré-requisitos (feitos pelo usuário, fora do plano):**
+- Projeto `servico-feito-dev` criado na nuvem; `supabase login` feito na máquina.
+- `.env` na raiz (git-ignored pela Task 1) contém:
+  - `SUPABASE_PROJECT_REF=<ref do dev>`
+  - `SUPABASE_DB_URL=<connection string do dev, role postgres — Session pooler, 5432>`
+- Se algum pré-requisito faltar, reporte **BLOCKED** nomeando o que falta.
 
 **Files:**
+- Modify: `package.json` (reescreve o bloco `scripts` — ver Step 1)
+- Modify: `package.json` (adiciona `pg` em `devDependencies` — ver Step 1)
 - Create: `supabase/config.toml` (via `supabase init`)
+- Create: `supabase/tests/run.mjs` (runner pgTAP em Node)
 - Create: `supabase/tests/0000_smoke.test.sql`
 - Create: `.env.example`
 
 **Interfaces:**
-- Consumes: workspace da Task 1.
-- Produces: stack Supabase local funcional; `supabase test db` executa arquivos `supabase/tests/*.sql` como pgTAP.
+- Consumes: workspace da Task 1; `.env` com `SUPABASE_PROJECT_REF` e `SUPABASE_DB_URL`.
+- Produces:
+  - `pnpm db:push` — aplica migrations não aplicadas no dev (`supabase db push --linked`).
+  - `pnpm db:test` — roda `node supabase/tests/run.mjs`: executa cada `supabase/tests/*.test.sql` contra `SUPABASE_DB_URL`, imprime TAP, sai != 0 se houver `not ok` ou erro.
+  - `pnpm db:types` — `supabase gen types typescript --linked > packages/db-types/index.ts`.
+  - `pnpm db:advisors` — `supabase db advisors --linked`.
+  - `supabase/` ligado ao projeto dev (`supabase/.temp/` com o link; git-ignored pela Task 1).
 
-- [ ] **Step 1: Rodar `supabase init`**
+- [ ] **Step 1: Reescrever `scripts` e `devDependencies` do `package.json`**
 
-Run: `pnpm supabase init`
-Expected: cria `supabase/config.toml` e `supabase/.gitignore`. Se perguntar sobre gerar settings de VS Code / Deno, responder **N**.
+Substituir o bloco `scripts` inteiro por:
 
-- [ ] **Step 2: Escrever `.env.example`**
-
-```dotenv
-# Supabase local (valores fixos do `supabase start` — não são segredos)
-EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<copiar de `pnpm supabase status` apos `pnpm db:start`>
-
-# Projeto dev remoto (preenchido quando o projeto Supabase dev for criado)
-SUPABASE_PROJECT_ID_DEV=
+```json
+  "scripts": {
+    "supabase": "supabase",
+    "db:link": "supabase link --project-ref $SUPABASE_PROJECT_REF",
+    "db:new": "supabase migration new",
+    "db:push": "supabase db push --linked",
+    "db:diff": "supabase db diff --linked",
+    "db:advisors": "supabase db advisors --linked",
+    "db:test": "node supabase/tests/run.mjs",
+    "db:types": "supabase gen types typescript --linked > packages/db-types/index.ts"
+  },
 ```
 
-- [ ] **Step 3: Escrever `supabase/tests/0000_smoke.test.sql`**
+E em `devDependencies`, subir a CLI para 2.x e adicionar `pg`:
+
+```json
+  "devDependencies": {
+    "pg": "^8.13.1",
+    "supabase": "^2.19.7"
+  }
+```
+
+Rodar `pnpm install` depois. (Node 18 no host → WARN de engine, aceito.)
+
+- [ ] **Step 2: `supabase init`**
+
+Run: `pnpm supabase init`
+Expected: cria `supabase/config.toml` e `supabase/.gitignore`. Se perguntar sobre settings de VS Code / Deno / IntelliJ, responder **N** a todas.
+
+- [ ] **Step 3: Ligar ao projeto dev**
+
+Run: `pnpm db:link`
+Expected: `supabase link` conclui; pede a Database Password do projeto (ou usa `SUPABASE_DB_PASSWORD` se setada) — o usuário informa. `supabase projects list` passa a marcar o projeto dev com `●` (linked). Se falhar por login ausente → BLOCKED (`supabase login` é pré-requisito).
+
+- [ ] **Step 4: Escrever `supabase/tests/run.mjs`**
+
+```js
+// Runner pgTAP sem Docker: roda cada supabase/tests/*.test.sql contra SUPABASE_DB_URL.
+// Cada arquivo já faz begin/…/select * from finish()/rollback, então nada persiste.
+// Sai com código != 0 se algum arquivo produzir linha "not ok" ou erro de execução.
+import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import pg from 'pg';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const url = process.env.SUPABASE_DB_URL;
+if (!url) {
+  console.error('SUPABASE_DB_URL não definida (ver .env / .env.example)');
+  process.exit(2);
+}
+
+const files = readdirSync(here)
+  .filter((f) => f.endsWith('.test.sql'))
+  .sort();
+
+if (files.length === 0) {
+  console.error('nenhum arquivo *.test.sql em', here);
+  process.exit(2);
+}
+
+let failed = 0;
+for (const file of files) {
+  const sql = readFileSync(join(here, file), 'utf8');
+  const client = new pg.Client({ connectionString: url });
+  const tap = [];
+  client.on('notice', (n) => n.message && tap.push(n.message));
+  try {
+    await client.connect();
+    const results = await client.query(sql);
+    const sets = Array.isArray(results) ? results : [results];
+    for (const r of sets) {
+      for (const row of r.rows ?? []) {
+        const line = Object.values(row)[0];
+        if (typeof line === 'string') tap.push(line);
+      }
+    }
+  } catch (err) {
+    tap.push('not ok - erro de execução: ' + err.message);
+  } finally {
+    await client.end().catch(() => {});
+  }
+  const bad = tap.filter((l) => /^not ok\b/.test(l.trim()));
+  const okCount = tap.filter((l) => /^ok\b/.test(l.trim())).length;
+  if (bad.length > 0) {
+    failed += bad.length;
+    console.log(`✗ ${file} — ${bad.length} falha(s), ${okCount} ok`);
+    for (const l of tap) console.log('   ' + l);
+  } else {
+    console.log(`✓ ${file} — ${okCount} ok`);
+  }
+}
+
+if (failed > 0) {
+  console.error(`\n${failed} assert(s) falharam`);
+  process.exit(1);
+}
+console.log('\ntodos os testes pgTAP passaram');
+```
+
+- [ ] **Step 5: Escrever `.env.example`**
+
+```dotenv
+# --- App (Expo) — preenchido de fato no Plano 2 ---
+EXPO_PUBLIC_SUPABASE_URL=
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+
+# --- Toolchain de banco (dev na nuvem) ---
+# ref do projeto servico-feito-dev (dashboard/project/<ref>)
+SUPABASE_PROJECT_REF=
+# connection string do projeto dev, role postgres (Session pooler, porta 5432).
+# É SEGREDO — vai no .env real, nunca commitar.
+SUPABASE_DB_URL=
+# opcional: senha do banco para `supabase link`/`db push` não interativo
+SUPABASE_DB_PASSWORD=
+```
+
+- [ ] **Step 6: Escrever `supabase/tests/0000_smoke.test.sql`**
 
 ```sql
 begin;
@@ -234,21 +369,21 @@ select * from finish();
 rollback;
 ```
 
-- [ ] **Step 4: Subir a stack local**
+- [ ] **Step 7: Habilitar pgTAP no dev e rodar o smoke**
 
-Run: `pnpm db:start`
-Expected: baixa imagens Docker (primeira vez é lento) e imprime as URLs/keys locais. `pnpm supabase status` mostra `API URL: http://127.0.0.1:54321`.
+O `pgtap` só é criado pela migration da Task 3; para o smoke da Task 2 rodar, habilitar manualmente uma vez:
 
-- [ ] **Step 5: Rodar o teste smoke**
+Run: `pnpm supabase db execute --linked "create extension if not exists pgtap with schema extensions;"`
+(se `db execute` não existir nessa versão da CLI, rodar o mesmo SQL no SQL editor do dashboard do dev.)
 
 Run: `pnpm db:test`
-Expected: PASS — `0000_smoke.test.sql .. ok` e `All tests successful`.
+Expected: PASS — `✓ 0000_smoke.test.sql — 1 ok` e `todos os testes pgTAP passaram`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add supabase/config.toml supabase/.gitignore supabase/tests/0000_smoke.test.sql .env.example
-git commit -m "chore: supabase init + harness pgTAP (teste smoke)"
+git add package.json pnpm-lock.yaml supabase/config.toml supabase/.gitignore supabase/tests/run.mjs supabase/tests/0000_smoke.test.sql .env.example
+git commit -m "chore: ligar ao Supabase dev + runner pgTAP em Node (sem Docker)"
 ```
 
 ---
@@ -2361,10 +2496,10 @@ git commit -m "feat(db): RLS de contratacoes e pagamentos (leitura pelas partes,
 }
 ```
 
-- [ ] **Step 3: Garantir a stack local no ar e gerar os tipos**
+- [ ] **Step 3: Garantir o dev com todas as migrations aplicadas e gerar os tipos**
 
-Run: `pnpm db:start && pnpm db:reset && pnpm db:types`
-Expected: cria `packages/db-types/index.ts` não vazio, começando com `export type Json =` e contendo `export type Database = {`.
+Run: `pnpm db:push && pnpm db:types`
+Expected: `db:push` sem migrations pendentes (todas já aplicadas nas Tasks 3–22); cria `packages/db-types/index.ts` não vazio, começando com `export type Json =` e contendo `export type Database = {`. (`db:types` = `supabase gen types typescript --linked`, introspecta o dev na nuvem — sem Docker.)
 
 - [ ] **Step 4: Verificar o conteúdo gerado**
 
@@ -2389,8 +2524,14 @@ git commit -m "feat(db-types): tipos TypeScript gerados do esquema Supabase"
 - Create: `.github/workflows/ci.yml`
 
 **Interfaces:**
-- Consumes: scripts `pnpm db:*`, `packages/db-types/index.ts` commitado (Task 23).
-- Produces: workflow que em cada push/PR sobe o Supabase local, roda `supabase db lint`, `supabase test db` e confere que `packages/db-types/index.ts` está atualizado em relação ao esquema.
+- Consumes: scripts `pnpm db:*`, `packages/db-types/index.ts` commitado (Task 23), secrets/vars do repositório GitHub.
+- Produces: workflow que em cada push/PR, contra o projeto dev na nuvem (sem Docker): confere `supabase db diff --linked` vazio (esquema = migrations), roda o runner pgTAP (`pnpm db:test`), roda `supabase db advisors --linked`, e confere que `packages/db-types/index.ts` está atualizado.
+
+**Pré-requisito (fora do plano):** no GitHub do repositório, criar:
+- Secret `SUPABASE_ACCESS_TOKEN` (Personal Access Token da conta Supabase).
+- Secret `SUPABASE_DB_URL` (connection string do dev, role postgres).
+- Secret `SUPABASE_DB_PASSWORD` (Database Password do dev).
+- Variable `SUPABASE_PROJECT_REF` (ref do dev).
 
 - [ ] **Step 1: Escrever `.github/workflows/ci.yml`**
 
@@ -2405,6 +2546,11 @@ on:
 jobs:
   db:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
     steps:
       - uses: actions/checkout@v4
 
@@ -2419,54 +2565,61 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Subir Supabase local
-        run: pnpm supabase start
+      - name: Ligar ao projeto dev
+        run: pnpm supabase link --project-ref "$SUPABASE_PROJECT_REF"
 
-      - name: Lint do esquema
-        run: pnpm supabase db lint --level warning
+      - name: Esquema do dev == migrations do repo
+        run: |
+          if ! pnpm supabase db diff --linked --schema public,tests > /tmp/diff.txt 2>&1; then
+            cat /tmp/diff.txt; exit 1
+          fi
+          if [ -s /tmp/diff.txt ] && ! grep -q "No schema changes found" /tmp/diff.txt; then
+            echo "::error::dev fora de sync com supabase/migrations. Rode 'pnpm db:push'."
+            cat /tmp/diff.txt; exit 1
+          fi
 
-      - name: Aplicar migrations do zero
-        run: pnpm supabase db reset --no-seed
+      - name: Testes pgTAP (runner Node)
+        run: pnpm db:test
 
-      - name: Testes pgTAP
-        run: pnpm supabase test db
+      - name: Advisors (security + performance)
+        run: pnpm supabase db advisors --linked --level warning || true
 
       - name: Conferir db-types atualizado
         run: |
-          pnpm supabase gen types typescript --local > /tmp/db-types.ts
+          pnpm supabase gen types typescript --linked > /tmp/db-types.ts
           if ! diff -u packages/db-types/index.ts /tmp/db-types.ts; then
             echo "::error::packages/db-types/index.ts desatualizado. Rode 'pnpm db:types' e faça commit."
             exit 1
           fi
-
-      - name: Derrubar Supabase local
-        if: always()
-        run: pnpm supabase stop
 ```
+
+> Nota: o CI compartilha o projeto dev com os agentes. Os testes pgTAP rodam em
+> transação com rollback, então não poluem. `advisors` é informativo (`|| true`)
+> nesta fase; endurecer depois.
 
 - [ ] **Step 2: Validar o YAML localmente**
 
-Run: `pnpm -w exec node -e "const y=require('fs').readFileSync('.github/workflows/ci.yml','utf8'); if(!y.includes('supabase test db')) process.exit(1); console.log('ok')"`
+Run: `pnpm -w exec node -e "const y=require('fs').readFileSync('.github/workflows/ci.yml','utf8'); if(!y.includes('pnpm db:test')||!y.includes('db diff --linked')) process.exit(1); console.log('ok')"`
 Expected: imprime `ok`.
 
-- [ ] **Step 3: Rodar a sequência do CI localmente**
+- [ ] **Step 3: Rodar a sequência do CI localmente (contra o dev)**
 
-Run: `pnpm db:start && pnpm db:lint && pnpm supabase db reset --no-seed && pnpm db:test && pnpm db:types && git diff --exit-code packages/db-types/index.ts`
-Expected: todos os passos com código 0; `git diff` sem saída (tipos já atualizados).
+Run: `pnpm supabase db diff --linked --schema public,tests && pnpm db:test && pnpm db:types && git diff --exit-code packages/db-types/index.ts`
+Expected: `db diff` reporta `No schema changes found`; `db:test` verde; `git diff` sem saída (tipos já atualizados).
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add .github/workflows/ci.yml
-git commit -m "ci: pipeline de banco (lint, pgTAP, checagem de db-types)"
+git commit -m "ci: pipeline de banco sem Docker (diff, pgTAP runner, advisors, db-types)"
 ```
 
-- [ ] **Step 5: Empurrar o branch e confirmar o CI verde**
+- [ ] **Step 5: Empurrar o branch e confirmar o CI**
 
 ```bash
 git push -u origin HEAD
 ```
-Expected: o workflow `CI / db` roda no GitHub e termina verde. Se falhar por falta de Docker/limite de recursos no runner, revisar os logs antes de prosseguir para o Plano 2.
+Expected: o workflow `CI / db` roda no GitHub. Se os secrets/variable ainda não existirem, o job falha no passo "Ligar ao projeto dev" — registrar como pendência operacional (Task 25), não bloqueia o Plano 2.
 
 ---
 
@@ -2489,10 +2642,14 @@ Nenhuma bloqueia os Planos 2–5. As de pagamento bloqueiam o Plano 6.
 
 ## Projetos Supabase
 
-- [ ] Criar projeto Supabase **dev** (org do Serviço Feito). Guardar `Project ref`.
-- [ ] `supabase link --project-ref <dev>` e `supabase db push` (aplica as migrations deste plano).
-- [ ] Preencher `.env` local com `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` do projeto dev.
-- [ ] Criar projeto Supabase **prod** só no lançamento; mesmas migrations via `db push`.
+- [x] Criar projeto Supabase **dev** `servico-feito-dev` (org do Serviço Feito). **Pré-requisito da Task 2** — feito antes da execução retomar. Guardar `Project ref` e `Database Password`.
+- [x] `supabase login` na máquina; `.env` da raiz com `SUPABASE_PROJECT_REF`, `SUPABASE_DB_URL`, `SUPABASE_DB_PASSWORD`.
+- [ ] GitHub do repo: secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_URL`, `SUPABASE_DB_PASSWORD` + variable `SUPABASE_PROJECT_REF` (para o CI da Task 24).
+- [ ] Preencher `.env` local com `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` do projeto dev (para o Plano 2).
+- [ ] Criar projeto Supabase **prod** só no lançamento; mesmas migrations via `supabase db push`.
+
+> As duas primeiras linhas são pré-requisito da Task 2 e o executor confirma que
+> foram feitas antes de rodar `pnpm db:link`. As demais não bloqueiam os Planos 2–5.
 
 ## Rotação de segredos vazados (repo Kotlin em docs/arquitetura-antiga/)
 
@@ -2525,7 +2682,7 @@ git commit -m "docs: checklist operacional da fundação (projetos Supabase, rot
 - Seção 6 (modelo de dados): enums (Task 3), `usuarios` + trigger (Task 6), `perfil_prestador` e extras (Task 7), catálogo (Task 8), endereços (Task 9), demandas (Task 10), conversas/mensagens (Task 11), propostas + colunas geradas (Task 12), contratações/pagamentos + colunas geradas (Task 13), avaliações/notificações (Task 14), view `perfis_publicos` (Task 15). Coberto.
 - Seção 7 (RLS): helpers (Task 16), enable (Task 17), policies públicas (Task 18), pessoais (Task 19), demandas (Task 20), conversas/mensagens/propostas com o teste de isolamento RB15 (Task 21), contratações/pagamentos (Task 22). Testes pgTAP em cada uma. Coberto.
 - Seção 8 (db-types): Task 23. Coberto (o resto da seção 8 — repositories, hooks — é Plano 3).
-- Seção 5 (ambientes + rotação de segredos): Task 25 (checklist operacional). As ações são manuais fora do código; o plano as versiona e não as bloqueia.
+- Seção 5 (ambientes + rotação de segredos): adendo SEM DOCKER (topo) + Task 2 (ligar ao dev na nuvem, runner pgTAP Node) + Task 24 (CI contra o dev) + Task 25 (checklist: criar dev como pré-requisito, prod no lançamento, rotação de segredos). Não há dev local — decisão do usuário 2026-09-08.
 - Seções 9–13 (auth, navegação, pagamento, erros, testes de app, visual): fora do escopo deste plano, são Planos 2–7.
 - Global Constraints: Node 20 / pnpm 9 (Task 1); `snake_case`, `gen_random_uuid()`, `created_at`/`updated_at` + trigger, colunas geradas 20/80/50, enums nativos, RLS em todas as tabelas, `security definer` com `search_path=''` — aplicados nas migrations e verificados nos testes.
 
