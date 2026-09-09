@@ -1,16 +1,12 @@
-import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
 import { useAuthStore } from "@/shared/store/authStore";
+import { CarregandoEstado } from "@/shared/components/molecules/CarregandoEstado";
 
 export default function Index() {
   const session = useAuthStore((s) => s.session);
   const carregando = useAuthStore((s) => s.carregando);
   if (carregando) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <CarregandoEstado />;
   }
   return <Redirect href={session ? "/(app)/(tabs)" : "/(auth)/login"} />;
 }

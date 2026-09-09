@@ -1,6 +1,5 @@
 import "../global.css";
 import { useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -8,6 +7,7 @@ import { queryClient } from "@/shared/query/queryClient";
 import { assertEnvSupabase } from "@/shared/api/supabaseClient";
 import { useAuthStore } from "@/shared/store/authStore";
 import { useUiModeStore } from "@/shared/store/uiModeStore";
+import { CarregandoEstado } from "@/shared/components/molecules/CarregandoEstado";
 
 export default function RootLayout() {
   const carregando = useAuthStore((s) => s.carregando);
@@ -24,9 +24,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         {carregando ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator />
-          </View>
+          <CarregandoEstado />
         ) : (
           <Stack screenOptions={{ headerShown: false }} />
         )}
