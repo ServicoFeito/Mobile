@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 import { useUiModeStore } from "@/shared/store/uiModeStore";
-import TabsLayout from "./_layout";
+import TabsLayout from "../../app/(app)/(tabs)/_layout";
 
 jest.mock("expo-router", () => ({
   Tabs: Object.assign(
