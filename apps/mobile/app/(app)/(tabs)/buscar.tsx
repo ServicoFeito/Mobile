@@ -1,2 +1,4 @@
-import { BuscarScreen } from "@/features/shell/screens/BuscarScreen";
-export default function BuscarRoute() { return <BuscarScreen />; }
+import { BuscarScreen } from "@/features/descoberta/screens/BuscarScreen";
+export default function BuscarRoute() {
+  return <BuscarScreen />;
+}
