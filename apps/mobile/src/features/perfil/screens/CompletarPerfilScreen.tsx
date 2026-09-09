@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { View, Text } from "react-native";
 import { router } from "expo-router";
 import { useCompletarPerfil } from "../hooks/useCompletarPerfil";
+import { Botao } from "@/shared/components/atoms/Botao";
+import { CampoTexto } from "@/shared/components/atoms/CampoTexto";
 
 export function CompletarPerfilScreen() {
   const [nome, setNome] = useState("");
@@ -20,13 +22,16 @@ export function CompletarPerfilScreen() {
     <View className="flex-1 bg-sf-bg px-6 justify-center gap-3">
       <Text className="text-2xl font-bold text-sf-text mb-1">Complete seu perfil</Text>
       <Text className="text-sf-body mb-2">Falta pouco para começar.</Text>
-      <TextInput className="bg-sf-surface border border-sf-outline rounded-lg px-4 py-3 text-sf-text" placeholder="Nome completo" value={nome} onChangeText={setNome} />
-      <TextInput className="bg-sf-surface border border-sf-outline rounded-lg px-4 py-3 text-sf-text" placeholder="Telefone" keyboardType="phone-pad" value={telefone} onChangeText={setTelefone} />
-      <TextInput className="bg-sf-surface border border-sf-outline rounded-lg px-4 py-3 text-sf-text" placeholder="Cidade" value={cidade} onChangeText={setCidade} />
+      <CampoTexto placeholder="Nome completo" value={nome} onChangeText={setNome} />
+      <CampoTexto placeholder="Telefone" keyboardType="phone-pad" value={telefone} onChangeText={setTelefone} />
+      <CampoTexto placeholder="Cidade" value={cidade} onChangeText={setCidade} />
       {m.isError ? <Text className="text-sf-status-red">{(m.error as Error).message}</Text> : null}
-      <Pressable disabled={!ok} onPress={() => m.mutate({ nome, telefone, cidade })} className={`rounded-lg py-3 items-center ${ok ? "bg-sf-primary" : "bg-sf-muted"}`}>
-        {m.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Salvar</Text>}
-      </Pressable>
+      <Botao
+        titulo="Salvar"
+        onPress={() => m.mutate({ nome, telefone, cidade })}
+        carregando={m.isPending}
+        desabilitado={!ok}
+      />
     </View>
   );
 }

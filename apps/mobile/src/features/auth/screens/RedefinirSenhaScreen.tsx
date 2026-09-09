@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { View, Text } from "react-native";
 import { Link } from "expo-router";
 import { useResetPassword } from "../hooks/useResetPassword";
+import { Botao } from "@/shared/components/atoms/Botao";
+import { CampoTexto } from "@/shared/components/atoms/CampoTexto";
 
 export function RedefinirSenhaScreen() {
   const [email, setEmail] = useState("");
@@ -11,8 +13,7 @@ export function RedefinirSenhaScreen() {
   return (
     <View className="flex-1 bg-sf-bg px-6 justify-center gap-3">
       <Text className="text-2xl font-bold text-sf-text mb-2">Redefinir senha</Text>
-      <TextInput
-        className="bg-sf-surface border border-sf-outline rounded-lg px-4 py-3 text-sf-text"
+      <CampoTexto
         placeholder="E-mail"
         autoCapitalize="none"
         keyboardType="email-address"
@@ -25,13 +26,12 @@ export function RedefinirSenhaScreen() {
       {reset.isSuccess ? (
         <Text className="text-sf-body">Enviamos um link para seu e-mail.</Text>
       ) : null}
-      <Pressable
-        disabled={!podeEnviar}
+      <Botao
+        titulo="Enviar link"
         onPress={() => reset.mutate(email)}
-        className={`rounded-lg py-3 items-center ${podeEnviar ? "bg-sf-primary" : "bg-sf-muted"}`}
-      >
-        {reset.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Enviar link</Text>}
-      </Pressable>
+        carregando={reset.isPending}
+        desabilitado={!podeEnviar}
+      />
       <View className="flex-row justify-between mt-2">
         <Link href="/(auth)/login" className="text-sf-primary">Voltar ao login</Link>
       </View>

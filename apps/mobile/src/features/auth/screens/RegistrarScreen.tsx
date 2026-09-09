@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { View, Text } from "react-native";
 import { Link } from "expo-router";
 import { useSignUp } from "../hooks/useSignUp";
+import { Botao } from "@/shared/components/atoms/Botao";
+import { CampoTexto } from "@/shared/components/atoms/CampoTexto";
 
 export function RegistrarScreen() {
   const [email, setEmail] = useState("");
@@ -14,23 +16,20 @@ export function RegistrarScreen() {
   return (
     <View className="flex-1 bg-sf-bg px-6 justify-center gap-3">
       <Text className="text-2xl font-bold text-sf-text mb-2">Criar conta</Text>
-      <TextInput
-        className="bg-sf-surface border border-sf-outline rounded-lg px-4 py-3 text-sf-text"
+      <CampoTexto
         placeholder="E-mail"
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
-        className="bg-sf-surface border border-sf-outline rounded-lg px-4 py-3 text-sf-text"
+      <CampoTexto
         placeholder="Senha"
         secureTextEntry
         value={senha}
         onChangeText={setSenha}
       />
-      <TextInput
-        className="bg-sf-surface border border-sf-outline rounded-lg px-4 py-3 text-sf-text"
+      <CampoTexto
         placeholder="Confirmar senha"
         secureTextEntry
         value={confirmar}
@@ -42,13 +41,12 @@ export function RegistrarScreen() {
       {signUp.isSuccess ? (
         <Text className="text-sf-body">Verifique seu e-mail para confirmar.</Text>
       ) : null}
-      <Pressable
-        disabled={!podeEnviar}
+      <Botao
+        titulo="Criar conta"
         onPress={() => signUp.mutate({ email, senha })}
-        className={`rounded-lg py-3 items-center ${podeEnviar ? "bg-sf-primary" : "bg-sf-muted"}`}
-      >
-        {signUp.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Criar conta</Text>}
-      </Pressable>
+        carregando={signUp.isPending}
+        desabilitado={!podeEnviar}
+      />
       <View className="flex-row justify-between mt-2">
         <Link href="/(auth)/login" className="text-sf-primary">Já tenho conta</Link>
       </View>
