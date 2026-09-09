@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Serviço Feito",
+    "slug": "servico-feito",
+    "scheme": "servicofeito",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.servicofeito.app" },
+    "android": { "package": "com.servicofeito.app" },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true }
+  }
+}

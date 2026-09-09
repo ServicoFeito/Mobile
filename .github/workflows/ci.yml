@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, homolog]
+  pull_request:
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Ligar ao projeto dev
+        run: pnpm supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Esquema do dev == migrations do repo
+        run: |
+          if ! pnpm supabase db diff --linked --schema public,tests > /tmp/diff.txt 2>&1; then
+            cat /tmp/diff.txt; exit 1
+          fi
+          if [ -s /tmp/diff.txt ] && ! grep -q "No schema changes found" /tmp/diff.txt; then
+            echo "::error::dev fora de sync com supabase/migrations. Rode 'pnpm db:push'."
+            cat /tmp/diff.txt; exit 1
+          fi
+
+      - name: Testes pgTAP (runner Node)
+        run: pnpm db:test
+
+      - name: Advisors (security + performance)
+        run: pnpm supabase db advisors --linked --level warning || true
+
+      - name: Conferir db-types atualizado
+        run: |
+          pnpm supabase gen types typescript --linked > /tmp/db-types.ts
+          if ! diff -u packages/db-types/index.ts /tmp/db-types.ts; then
+            echo "::error::packages/db-types/index.ts desatualizado. Rode 'pnpm db:types' e faça commit."
+            exit 1
+          fi
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @servico-feito/mobile exec tsc --noEmit
+
+      - name: Testes (Jest)
+        run: pnpm --filter @servico-feito/mobile test -- --ci
+
+      - name: Lint
+        run: pnpm --filter @servico-feito/mobile lint
