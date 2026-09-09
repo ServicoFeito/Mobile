@@ -12,12 +12,12 @@ export function usePrestadoresPorCategoria(categoriaId: string, filtros: Filtros
   return useInfiniteQuery<Pagina<PrestadorResumo>>({
     queryKey: ["prestadores", "porCategoria", categoriaId, filtros],
     enabled: !!categoriaId,
-    initialPageParam: null,
+    initialPageParam: undefined,
     queryFn: ({ pageParam }) =>
       repositories.prestadores.listarPorCategoria(categoriaId, filtros, {
         limite: LIMITE_PAGINA,
-        cursor: (pageParam ?? undefined) as string | undefined,
+        cursor: pageParam as string | undefined,
       }),
-    getNextPageParam: (ultima) => ultima.proximoCursor,
+    getNextPageParam: (ultima) => ultima.proximoCursor ?? undefined,
   });
 }

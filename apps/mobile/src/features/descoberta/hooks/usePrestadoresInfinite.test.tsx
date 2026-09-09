@@ -15,6 +15,8 @@ const pagina = (ids: string[], prox: string | null) => ({
   proximoCursor: prox,
 });
 
+beforeEach(() => jest.clearAllMocks());
+
 it("usePrestadoresPorCategoria busca a 1ª página e expõe hasNextPage pelo proximoCursor", async () => {
   (repositories.prestadores.listarPorCategoria as jest.Mock).mockResolvedValue(pagina(["p1", "p2"], "2"));
   const { result } = renderHook(() => usePrestadoresPorCategoria("c1", {}), { wrapper });
@@ -29,10 +31,9 @@ it("fetchNextPage passa o proximoCursor como cursor", async () => {
     .mockResolvedValueOnce(pagina(["p2"], null));
   const { result } = renderHook(() => usePrestadoresPorCategoria("c1", {}), { wrapper });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
-  await result.current.fetchNextPage();
-  await waitFor(() => expect(result.current.isFetchingNextPage).toBe(false));
+  result.current.fetchNextPage(); // NÃO await — deixa o re-render pendente pro act-loop do RTL
+  await waitFor(() => expect(result.current.hasNextPage).toBe(false));
   expect((repositories.prestadores.listarPorCategoria as jest.Mock).mock.calls[1][2]).toEqual({ limite: 20, cursor: "20" });
-  expect(result.current.hasNextPage).toBe(false);
 });
 
 it("useBuscarPrestadores fica disabled com termo < 2 chars", async () => {
