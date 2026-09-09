@@ -28,3 +28,6 @@ apps/mobile/dist/
 # os
 .DS_Store
 Thumbs.db
+
+# Workspace do subagent-driven-development (briefs, reports, review packages)
+.superpowers/
