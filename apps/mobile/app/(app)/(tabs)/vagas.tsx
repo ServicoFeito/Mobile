@@ -1,2 +1,4 @@
-import { VagasScreen } from "@/features/shell/screens/VagasScreen";
-export default function VagasRoute() { return <VagasScreen />; }
+import { VagasScreen } from "@/features/demandas/screens/VagasScreen";
+export default function VagasRoute() {
+  return <VagasScreen />;
+}
