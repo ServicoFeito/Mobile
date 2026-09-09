@@ -1,5 +1,9 @@
 import "@testing-library/react-native/extend-expect";
 
+// --- WebSocket: jest-expo (Node 18) não expõe global; @supabase/realtime-js >= 2.116
+//     exige um construtor já na criação do client. Shim só para o ambiente de teste. ---
+(globalThis as { WebSocket?: unknown }).WebSocket ??= class {};
+
 // --- expo-secure-store: mock em memória ---
 jest.mock("expo-secure-store", () => {
   const store = new Map<string, string>();

@@ -1,7 +1,3 @@
-// jest-expo (Node 18) não expõe `WebSocket` global; @supabase/realtime-js >= 2.116
-// exige um construtor de WebSocket já na criação do client. Shim só para o ambiente de teste.
-(globalThis as { WebSocket?: unknown }).WebSocket ??= class {};
-
 describe("supabaseClient", () => {
   it("exporta um client com auth configurado", () => {
     const { supabase } = require("./supabaseClient");
