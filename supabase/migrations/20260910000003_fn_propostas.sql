@@ -46,9 +46,10 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_prop        public.propostas%rowtype;
-  v_titulo      text;
-  v_contratacao uuid;
+  v_prop         public.propostas%rowtype;
+  v_titulo       text;
+  v_contratacao  uuid;
+  v_dem_status   public.status_demanda;
 begin
   select * into v_prop
     from public.propostas
@@ -69,6 +70,20 @@ begin
 
   if v_prop.status not in ('ENVIADA', 'VISUALIZADA') then
     raise exception 'proposta_indisponivel' using errcode = 'PT409';
+  end if;
+
+  -- Trava e valida a demanda antes de mudar a proposta. Impede uma 2a contratacao
+  -- numa demanda ja resolvida (contratacoes.demanda_id nao tem UNIQUE) e serializa
+  -- aceites concorrentes de propostas DISTINTAS da mesma demanda -- a UNIQUE de
+  -- contratacoes.proposta_id so pega o mesmo proposta_id.
+  if v_prop.demanda_id is not null then
+    select status into v_dem_status
+      from public.demandas_servico
+      where id = v_prop.demanda_id
+      for update;
+    if v_dem_status in ('CONTRATADA', 'FINALIZADA', 'CANCELADA') then
+      raise exception 'demanda_indisponivel' using errcode = 'PT409';
+    end if;
   end if;
 
   update public.propostas set status = 'ACEITA' where id = p_proposta_id;
