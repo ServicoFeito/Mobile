@@ -6,7 +6,7 @@ import type {
   NovaDemanda,
   FiltrosDemanda,
 } from "@/features/demandas/types/demanda.types";
-import type { PageParams, Pagina } from "../types";
+import type { PageParams } from "../types";
 import type { DemandasRepository } from "./demandasRepository";
 import { normalizarErro } from "../types";
 

@@ -20,7 +20,7 @@ import { CriarDemandaScreen } from "./CriarDemandaScreen";
 const Wrapper = criarWrapperQuery();
 
 it("botão desabilitado até categoria + título + descrição + endereço", async () => {
-  const { getByText, getByPlaceholderText, queryByText } = render(<CriarDemandaScreen />, { wrapper: Wrapper });
+  const { getByText, getByPlaceholderText } = render(<CriarDemandaScreen />, { wrapper: Wrapper });
   await waitFor(() => getByText("Pintor"));
   // nada preenchido → Botao mostra o título mas onPress não chama o repo
   fireEvent.press(getByText("Publicar demanda"));
@@ -45,5 +45,4 @@ it("botão desabilitado até categoria + título + descrição + endereço", asy
     ),
   );
   expect(mockReplace).toHaveBeenCalledWith("/(app)/demanda/d9");
-  expect(queryByText).toBeTruthy();
 });

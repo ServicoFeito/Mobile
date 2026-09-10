@@ -1,6 +1,6 @@
 import { supabase } from "@/shared/api/supabaseClient";
 import type { Database } from "@servico-feito/db-types";
-import type { Endereco, NovoEndereco } from "@/features/enderecos/types/endereco.types";
+import type { Endereco } from "@/features/enderecos/types/endereco.types";
 import type { EnderecosRepository } from "./enderecosRepository";
 import { normalizarErro } from "../types";
 
