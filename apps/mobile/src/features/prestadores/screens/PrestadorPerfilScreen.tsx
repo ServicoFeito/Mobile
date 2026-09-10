@@ -1,13 +1,19 @@
 import { ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
 import { usePrestadorPerfil } from "@/features/prestadores/hooks/usePrestadorPerfil";
 import { PortfolioGaleria } from "@/features/prestadores/components/PortfolioGaleria";
 import { DisponibilidadeChips } from "@/features/prestadores/components/DisponibilidadeChips";
+import { useIniciarConversa } from "@/features/conversas/hooks/useIniciarConversa";
+import { Botao } from "@/shared/components/atoms/Botao";
 import { CarregandoEstado } from "@/shared/components/molecules/CarregandoEstado";
 import { ErroEstado } from "@/shared/components/molecules/ErroEstado";
+import { useAuthStore } from "@/shared/store/authStore";
 import { traduzErroRepo } from "@/shared/lib/traduzErroRepo";
 
 export function PrestadorPerfilScreen({ usuarioId }: { usuarioId: string }) {
   const q = usePrestadorPerfil(usuarioId);
+  const usuarioAtualId = useAuthStore((s) => s.usuarioId);
+  const { iniciarDireta, pendente } = useIniciarConversa();
 
   if (q.isLoading) return <CarregandoEstado />;
   if (q.isError || !q.data) return <ErroEstado mensagem={traduzErroRepo(q.error)} onRetry={() => q.refetch()} />;
@@ -17,6 +23,21 @@ export function PrestadorPerfilScreen({ usuarioId }: { usuarioId: string }) {
     <ScrollView className="flex-1 bg-sf-bg px-4 pt-4">
       <Text className="text-2xl font-bold text-sf-text">{p.nome ?? "Prestador"}</Text>
       {p.tituloProfissional ? <Text className="text-sf-body mt-0.5">{p.tituloProfissional}</Text> : null}
+
+      {usuarioAtualId !== p.usuarioId ? (
+        <View className="mt-3">
+          <Botao
+            titulo="Conversar"
+            variante="secundario"
+            carregando={pendente}
+            onPress={async () => {
+              const r = await iniciarDireta(p.usuarioId);
+              router.push(`/conversa/${r.id}`);
+            }}
+          />
+        </View>
+      ) : null}
+
       <View className="flex-row gap-3 mt-1">
         {p.rating != null ? <Text className="text-sf-body text-sm">★ {p.rating.toFixed(1)} ({p.totalAvaliacoes ?? 0})</Text> : null}
         {p.cidade ? <Text className="text-sf-muted text-sm">{p.cidade}</Text> : null}

@@ -1,11 +1,19 @@
 import { ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
 import { useDemanda } from "@/features/demandas/hooks/useDemanda";
+import { useIniciarConversa } from "@/features/conversas/hooks/useIniciarConversa";
+import { Botao } from "@/shared/components/atoms/Botao";
 import { CarregandoEstado } from "@/shared/components/molecules/CarregandoEstado";
 import { ErroEstado } from "@/shared/components/molecules/ErroEstado";
+import { useAuthStore } from "@/shared/store/authStore";
+import { useUiModeStore } from "@/shared/store/uiModeStore";
 import { traduzErroRepo } from "@/shared/lib/traduzErroRepo";
 
 export function DemandaDetalheScreen({ id }: { id: string }) {
   const q = useDemanda(id);
+  const usuarioId = useAuthStore((s) => s.usuarioId);
+  const modo = useUiModeStore((s) => s.modo);
+  const { iniciarDemanda, pendente } = useIniciarConversa();
   if (q.isLoading) return <CarregandoEstado />;
   if (q.isError || !q.data) return <ErroEstado mensagem={traduzErroRepo(q.error)} onRetry={() => q.refetch()} />;
 
@@ -28,9 +36,18 @@ export function DemandaDetalheScreen({ id }: { id: string }) {
         <Text className="text-sf-muted text-xs mt-1">{d.totalPropostas} proposta(s)</Text>
       </View>
 
-      <Text className="text-sf-muted text-xs mt-6 mb-10">
-        Iniciar conversa com o cliente estará disponível em breve.
-      </Text>
+      {modo === "prestar" ? (
+        <View className="mt-6 mb-10">
+          <Botao
+            titulo="Tenho interesse"
+            carregando={pendente}
+            onPress={async () => {
+              const r = await iniciarDemanda(id, usuarioId ?? "");
+              router.push(`/conversa/${r.id}`);
+            }}
+          />
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
