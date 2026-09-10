@@ -43,4 +43,12 @@ describe("normalizarErro", () => {
     const e = new RepoError("rede", "Sem conexão.");
     expect(normalizarErro(e)).toBe(e);
   });
+
+  it.each([
+    ["PT401", "nao_autorizado"],
+    ["PT404", "nao_encontrado"],
+    ["PT409", "conflito"],
+  ] as const)("mapeia SQLSTATE de negocio %s -> %s", (code, esperado) => {
+    expect(normalizarErro({ code, message: "erro plpgsql" }).code).toBe(esperado);
+  });
 });

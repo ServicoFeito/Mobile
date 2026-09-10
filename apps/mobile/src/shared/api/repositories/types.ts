@@ -47,6 +47,9 @@ function classificar(e: unknown): CodigoRepo {
     if (obj.status === 401) return "nao_autenticado";
     const code = typeof obj.code === "string" ? obj.code : "";
     if (code === "PGRST116") return "nao_encontrado";
+    if (code === "PT401") return "nao_autorizado";
+    if (code === "PT404") return "nao_encontrado";
+    if (code === "PT409") return "conflito";
     if (code === "42501") return "nao_autorizado";
     if (code === "23505") return "conflito";
     if (code.startsWith("23")) return "validacao";
