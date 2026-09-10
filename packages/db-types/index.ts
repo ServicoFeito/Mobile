@@ -1148,7 +1148,15 @@ export type Database = {
       }
     }
     Functions: {
+      fn_aceitar_proposta: {
+        Args: { p_proposta_id: string }
+        Returns: string
+      }
       fn_e_participante: { Args: { p_conversa_id: string }; Returns: boolean }
+      fn_recusar_proposta: {
+        Args: { p_proposta_id: string }
+        Returns: undefined
+      }
       fn_tem_perfil_prestador: {
         Args: { p_usuario_id?: string }
         Returns: boolean
