@@ -13,7 +13,7 @@ export function ConversasListScreen() {
   const q = useMinhasConversas();
 
   return (
-    <View className="flex-1 bg-sf-bg px-4 pt-3">
+    <View className="flex-1 bg-sf-bg">
       {q.isLoading ? (
         <CarregandoEstado />
       ) : q.isError || !q.data ? (
