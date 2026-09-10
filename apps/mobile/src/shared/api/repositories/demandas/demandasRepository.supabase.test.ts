@@ -22,7 +22,17 @@ function mockQuery(resultado: { data: unknown; error: unknown }) {
   }
   q.limit = jest.fn().mockResolvedValue(resultado);
   q.single = jest.fn().mockResolvedValue(resultado);
+  q.maybeSingle = jest.fn().mockResolvedValue(resultado);
   jest.spyOn(supa, "from").mockReturnValue(q as never);
+  return q;
+}
+
+/** Chain de uma query só (select/eq → single|maybeSingle). */
+function mkChain(resultado: { data: unknown; error: unknown }) {
+  const q: Record<string, jest.Mock> = {};
+  for (const m of ["select", "eq"]) q[m] = jest.fn(() => q);
+  q.single = jest.fn().mockResolvedValue(resultado);
+  q.maybeSingle = jest.fn().mockResolvedValue(resultado);
   return q;
 }
 
@@ -59,11 +69,33 @@ it("listarAbertas aplica cursor (lt created_at), filtro de cidade e termo", asyn
   expect(q.ilike).toHaveBeenCalledWith("titulo", "%pint%");
 });
 
-it("obter devolve DemandaDetalhe com clienteNome do join perfis_publicos", async () => {
-  mockQuery({ data: linha("d1", "2026-03-03T00:00:00Z"), error: null });
+it("obter devolve DemandaDetalhe; clienteNome vem de 2ª query em perfis_publicos", async () => {
+  const dem = mkChain({
+    data: { ...linha("d1", "2026-03-03T00:00:00Z"), cliente_id: "u9" },
+    error: null,
+  });
+  const cli = mkChain({ data: { nome: "Ana" }, error: null });
+  jest
+    .spyOn(supa, "from")
+    .mockImplementation(((t: string) => (t === "perfis_publicos" ? cli : dem)) as never);
   const d = await demandasRepositorySupabase.obter("d1");
+  expect(dem.eq).toHaveBeenCalledWith("id", "d1");
+  expect(cli.eq).toHaveBeenCalledWith("usuario_id", "u9");
   expect(d.clienteNome).toBe("Ana");
   expect(d.enderecoCompleto).toBe("Rua A, 10");
+});
+
+it("obter: 2ª query sem cliente → clienteNome null, não quebra", async () => {
+  const dem = mkChain({
+    data: { ...linha("d1", "2026-03-03T00:00:00Z"), cliente_id: "u9" },
+    error: null,
+  });
+  const cli = mkChain({ data: null, error: null });
+  jest
+    .spyOn(supa, "from")
+    .mockImplementation(((t: string) => (t === "perfis_publicos" ? cli : dem)) as never);
+  const d = await demandasRepositorySupabase.obter("d1");
+  expect(d.clienteNome).toBeNull();
 });
 
 it("obter em 0 linhas (PGRST116) → RepoError nao_encontrado", async () => {

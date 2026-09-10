@@ -12,15 +12,16 @@ import { normalizarErro } from "../types";
 
 type LinhaDemanda = Database["public"]["Tables"]["demandas_servico"]["Row"] & {
   categoria_servico: { nome: string } | null;
-  perfis_publicos: { nome: string | null } | null;
 };
 
 const SELECT_RESUMO =
   "id, titulo, descricao, categoria_id, endereco_cidade, endereco_bairro, orcamento_maximo, urgencia, status, total_propostas, created_at, categoria_servico(nome)";
 
-const SELECT_DETALHE =
-  SELECT_RESUMO +
-  ", endereco_completo, data_desejada, perfis_publicos:demandas_servico_cliente_id_fkey(nome)";
+// `cliente_id` em vez do embed `perfis_publicos:<fk>(nome)` — a FK
+// demandas_servico.cliente_id resolve tanto p/ `usuarios` quanto p/ `perfis_publicos`
+// no PostgREST, e o embed nomeado por FK é frágil (PGRST201). O nome do cliente vem
+// de uma 2ª query em `perfis_publicos` (view pública).
+const SELECT_DETALHE = SELECT_RESUMO + ", endereco_completo, data_desejada, cliente_id";
 
 function paraResumo(l: LinhaDemanda): DemandaResumo {
   return {
@@ -75,11 +76,20 @@ export const demandasRepositorySupabase: DemandasRepository = {
         .single();
       if (error) throw normalizarErro(error);
       const l = data as unknown as LinhaDemanda;
+
+      // Nome do cliente: 2ª query na view pública. Falha aqui não derruba o detalhe.
+      const { data: cli } = await supabase
+        .from("perfis_publicos")
+        .select("nome")
+        .eq("usuario_id", l.cliente_id)
+        .maybeSingle();
+      const clienteNome = (cli as { nome: string | null } | null)?.nome ?? null;
+
       return {
         ...paraResumo(l),
         enderecoCompleto: l.endereco_completo,
         dataDesejada: l.data_desejada,
-        clienteNome: l.perfis_publicos?.nome ?? null,
+        clienteNome,
       };
     } catch (e) {
       throw normalizarErro(e);
