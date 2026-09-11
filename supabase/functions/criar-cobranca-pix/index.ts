@@ -20,7 +20,12 @@ Deno.serve(async (req) => {
     return resp as Response;
   }
 
-  const { pagamento_id } = await req.json();
+  let pagamento_id: string | undefined;
+  try {
+    ({ pagamento_id } = await req.json());
+  } catch {
+    return erro("corpo_invalido", 400);
+  }
   if (!pagamento_id) return erro("pagamento_id_ausente", 400);
 
   const service = createClient(
