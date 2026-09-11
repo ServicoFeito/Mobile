@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(15);
 
 select tests.create_supabase_user('t5_cli');
 select tests.create_supabase_user('t5_pre');
@@ -50,6 +50,8 @@ select is((select status::text from public.contratacoes where id = 'e5555555-000
           'CANCELADA', 'contratacao CANCELADA');
 select is((select status::text from public.demandas_servico where id = 'd5555555-0000-0000-0000-000000000001'),
           'ABERTA', 'demanda volta pra ABERTA');
+select is((select status::text from public.propostas where id = 'b5555555-0000-0000-0000-000000000001'),
+          'CANCELADA', 'proposta tambem fica CANCELADA');
 select is((select count(*)::int from public.mensagens
              where conversa_id = 'a5555555-0000-0000-0000-000000000001' and tipo = 'SISTEMA'),
           1, 'mensagem SISTEMA inserida');

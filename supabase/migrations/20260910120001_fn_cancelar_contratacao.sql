@@ -33,6 +33,8 @@ begin
 
   update public.contratacoes set status = 'CANCELADA' where id = p_contratacao_id;
 
+  update public.propostas set status = 'CANCELADA' where id = v_contr.proposta_id;
+
   if v_contr.demanda_id is not null then
     update public.demandas_servico
       set status = 'ABERTA'

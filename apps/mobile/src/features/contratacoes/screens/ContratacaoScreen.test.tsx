@@ -148,6 +148,14 @@ it("prestador não pode marcar tarefa: press no checkbox não chama marcarTarefa
   expect(marcarTarefaMutate).not.toHaveBeenCalled();
 });
 
+it("demanda sem tarefas visiveis (RLS): nao mostra a secao 'Tarefas'", () => {
+  mockUseTarefasDaDemanda.mockReturnValue({ data: [] });
+
+  const { queryByText } = render(<ContratacaoScreen id="p1" />);
+
+  expect(queryByText("Tarefas")).toBeNull();
+});
+
 it("erro de cancelamento (conflito) mostra a mensagem traduzida", () => {
   mockUseCancelarContratacao.mockReturnValue({
     mutate: cancelarMutate,

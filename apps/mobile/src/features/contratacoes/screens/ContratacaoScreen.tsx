@@ -92,7 +92,7 @@ export function ContratacaoScreen({ id }: { id: string }) {
           </View>
         ) : null}
 
-        {c.demandaId ? (
+        {c.demandaId && (tarefasQ.data ?? []).length > 0 ? (
           <View className="mt-6 mb-10">
             <Text className="text-sf-text font-semibold mb-1">Tarefas</Text>
             {(tarefasQ.data ?? []).map((t) => (
