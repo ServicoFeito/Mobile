@@ -32,7 +32,7 @@ function extrairCertPem(base64P12: string): CertPem {
 
 function clienteMtls(): Deno.HttpClient {
   const cert = extrairCertPem(Deno.env.get("EFI_CERT_P12_BASE64")!);
-  return Deno.createHttpClient({ certChain: cert.certChain, privateKey: cert.privateKey });
+  return Deno.createHttpClient({ cert: cert.certChain, key: cert.privateKey });
 }
 
 let tokenCache: { token: string; expiraEm: number } | null = null;
