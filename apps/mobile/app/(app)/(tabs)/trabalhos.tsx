@@ -1,2 +1,2 @@
-import { TrabalhosScreen } from "@/features/shell/screens/TrabalhosScreen";
+import { TrabalhosScreen } from "@/features/contratacoes/screens/TrabalhosScreen";
 export default function TrabalhosRoute() { return <TrabalhosScreen />; }

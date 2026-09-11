@@ -9,14 +9,14 @@ jest.mock("expo-router", () => ({
   ),
 }));
 
-it("modo contratar oculta vagas e trabalhos", () => {
+it("modo contratar oculta vagas", () => {
   useUiModeStore.setState({ modo: "contratar", carregado: true });
   const { UNSAFE_getAllByType } = render(<TabsLayout />);
   const screens = UNSAFE_getAllByType("mock-screen" as any);
   const byName = Object.fromEntries(screens.map((s: any) => [s.props["data-name"], s.props["data-href"]]));
   expect(byName.vagas).toBe("null");
-  expect(byName.trabalhos).toBe("null");
   expect(byName.buscar).not.toBe("null");
+  expect(byName.trabalhos).not.toBe("null");
 });
 
 it("modo prestar oculta buscar", () => {
@@ -26,4 +26,5 @@ it("modo prestar oculta buscar", () => {
   const byName = Object.fromEntries(screens.map((s: any) => [s.props["data-name"], s.props["data-href"]]));
   expect(byName.buscar).toBe("null");
   expect(byName.vagas).not.toBe("null");
+  expect(byName.trabalhos).not.toBe("null");
 });

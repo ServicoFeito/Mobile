@@ -16,7 +16,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: "Início" }} />
       <Tabs.Screen name="buscar" options={{ title: "Buscar", href: prestar ? null : "/(app)/(tabs)/buscar" }} />
       <Tabs.Screen name="vagas" options={{ title: "Vagas", href: prestar ? "/(app)/(tabs)/vagas" : null }} />
-      <Tabs.Screen name="trabalhos" options={{ title: "Trabalhos", href: prestar ? "/(app)/(tabs)/trabalhos" : null }} />
+      <Tabs.Screen name="trabalhos" options={{ title: "Trabalhos" }} />
       <Tabs.Screen name="conversas" options={{ title: "Mensagens" }} />
       <Tabs.Screen name="perfil" options={{ title: "Perfil" }} />
     </Tabs>
