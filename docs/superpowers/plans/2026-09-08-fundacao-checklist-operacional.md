@@ -19,12 +19,17 @@ Nenhuma bloqueia os Planos 2–5. As de pagamento bloqueiam o Plano 6.
 
 - [ ] Revogar / rotacionar a chave `service_role` do projeto antigo `yaqmivazqarfkggypuow`
       (arquivo `.../data/remote/supabase/SupabaseConfig.kt`). O projeto antigo será descartado.
-- [ ] Rotacionar `CLIENT_ID` / `CLIENT_SECRET` de **produção** da EFI
-      (arquivo `.../data/remote/efi/EfiConfig.kt`) no painel da EFI.
-- [ ] Gerar novos certificados `.p12` (homologação e produção) na EFI. Os antigos
-      (`.../app/src/main/res/raw/producao.p12`, `homologacao.p12`) são considerados comprometidos.
-- [ ] Confirmar que `.gitignore` bloqueia `*.p12` / `*.pem` / `.env` (feito na Task 1).
-- [ ] Guardar os valores novos apenas como Supabase secrets no Plano 6
+- [x] **DECISÃO DO USUÁRIO (2026-09-11): NÃO rotacionar** `CLIENT_ID` / `CLIENT_SECRET` de
+      homologação e produção da EFI (arquivo `.../data/remote/efi/EfiConfig.kt`) nem gerar
+      novos certificados `.p12`. Risco foi explicado (o par vazado no histórico do repo Kotlin
+      dá acesso permanente de cobrança Pix em nome da empresa a quem já tiver pego o
+      vazamento, até ser revogado no painel EFI) e aceito explicitamente pelo usuário. Os
+      **mesmos** valores (`CLIENT_ID_HOMOLOG`/`CLIENT_ID_PROD`/certs `homologacao.p12`/
+      `producao.p12`) serão usados no Plano 6. Não repetir esse alerta em sessões futuras
+      a menos que o usuário peça pra reconsiderar.
+- [x] Confirmar que `.gitignore` bloqueia `*.p12` / `*.pem` / `.env` (feito na Task 1;
+      reconfirmado 2026-09-11).
+- [ ] Guardar os valores (os mesmos, por decisão acima) só como Supabase secrets no Plano 6
       (`EFI_CLIENT_ID`, `EFI_CLIENT_SECRET`, `EFI_CERT_P12_BASE64`, `EFI_WEBHOOK_TOKEN`,
       `PLATFORM_PIX_KEY`). Nunca no repositório.
 
