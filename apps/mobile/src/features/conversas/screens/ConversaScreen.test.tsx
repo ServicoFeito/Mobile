@@ -181,7 +181,7 @@ it("mensagem CONTRATO_GERADO renderiza o card com o valor da proposta", () => {
   const { getByText } = render(<ConversaScreen id="a1" />);
 
   expect(getByText(/Contrato gerado/)).toBeTruthy();
-  expect(getByText("R$ 300.00")).toBeTruthy();
+  expect(getByText("R$ 300,00")).toBeTruthy();
 });
 
 it("ação 'Enviar proposta' só aparece para o prestador no modo prestar e navega no press", () => {

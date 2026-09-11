@@ -30,7 +30,7 @@ it("cliente + ENVIADA: mostra Aceitar/Recusar e dispara os callbacks", () => {
       onRecusar={onRecusar}
     />,
   );
-  expect(getByText("R$ 300.00")).toBeTruthy();
+  expect(getByText("R$ 300,00")).toBeTruthy();
   expect(getByText("Pintura completa")).toBeTruthy();
   fireEvent.press(getByText("Aceitar"));
   expect(onAceitar).toHaveBeenCalledTimes(1);
