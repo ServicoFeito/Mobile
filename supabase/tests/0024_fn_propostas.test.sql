@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(27);
 
 select tests.create_supabase_user('t3_cli');
 select tests.create_supabase_user('t3_pre');
@@ -87,6 +87,14 @@ select is((select count(*)::int from public.contratacoes where proposta_id = 'b3
           1, 'uma contratacao criada');
 select is((select valor_total from public.contratacoes where proposta_id = 'b3333333-0000-0000-0000-000000000001'),
           450.00, 'valor_total = valor da proposta');
+select is((select valor::numeric from public.pagamentos
+             where contratacao_id = (select id from public.contratacoes where proposta_id = 'b3333333-0000-0000-0000-000000000001')
+               and tipo = 'ENTRADA'),
+          225.00, 'pagamento ENTRADA criado com metade do valor');
+select is((select status::text from public.pagamentos
+             where contratacao_id = (select id from public.contratacoes where proposta_id = 'b3333333-0000-0000-0000-000000000001')
+               and tipo = 'ENTRADA'),
+          'PENDENTE', 'pagamento ENTRADA comeca PENDENTE');
 select is((select status::text from public.demandas_servico where id = 'd3333333-0000-0000-0000-000000000001'),
           'CONTRATADA', 'demanda CONTRATADA');
 select is((select count(*)::int from public.mensagens
@@ -175,6 +183,10 @@ select is((select titulo_servico from public.contratacoes
 select ok((select demanda_id from public.contratacoes
              where proposta_id = 'b3333333-0000-0000-0000-000000000004') is null,
           'DIRETA: contratacao sem demanda_id');
+select is((select valor::numeric from public.pagamentos
+             where contratacao_id = (select id from public.contratacoes where proposta_id = 'b3333333-0000-0000-0000-000000000004')
+               and tipo = 'ENTRADA'),
+          100.00, 'DIRETA: pagamento ENTRADA tambem criado');
 select is((select status::text from public.demandas_servico where id = 'd3333333-0000-0000-0000-000000000002'),
           'ABERTA', 'DIRETA: nenhuma demanda foi marcada CONTRATADA');
 
