@@ -7,6 +7,7 @@ import { mensagensRepositorySupabase } from "./mensagens/mensagensRepository.sup
 import { propostasRepositorySupabase } from "./propostas/propostasRepository.supabase";
 import { contratacoesRepositorySupabase } from "./contratacoes/contratacoesRepository.supabase";
 import { tarefasRepositorySupabase } from "./tarefas/tarefasRepository.supabase";
+import { pagamentosRepositorySupabase } from "./pagamentos/pagamentosRepository.supabase";
 
 export const repositories = {
   categorias: categoriasRepositorySupabase,
@@ -18,6 +19,7 @@ export const repositories = {
   propostas: propostasRepositorySupabase,
   contratacoes: contratacoesRepositorySupabase,
   tarefas: tarefasRepositorySupabase,
+  pagamentos: pagamentosRepositorySupabase,
 };
 
 export type { CategoriasRepository } from "./categorias/categoriasRepository";
@@ -29,5 +31,6 @@ export type { MensagensRepository } from "./mensagens/mensagensRepository";
 export type { PropostasRepository } from "./propostas/propostasRepository";
 export type { ContratacoesRepository } from "./contratacoes/contratacoesRepository";
 export type { TarefasRepository } from "./tarefas/tarefasRepository";
+export type { PagamentosRepository } from "./pagamentos/pagamentosRepository";
 export { RepoError, normalizarErro } from "./types";
 export type { CodigoRepo, PageParams, Pagina } from "./types";
