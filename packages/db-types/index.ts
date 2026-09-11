@@ -1152,6 +1152,10 @@ export type Database = {
         Args: { p_proposta_id: string }
         Returns: string
       }
+      fn_cancelar_contratacao: {
+        Args: { p_contratacao_id: string }
+        Returns: undefined
+      }
       fn_e_participante: { Args: { p_conversa_id: string }; Returns: boolean }
       fn_recusar_proposta: {
         Args: { p_proposta_id: string }
