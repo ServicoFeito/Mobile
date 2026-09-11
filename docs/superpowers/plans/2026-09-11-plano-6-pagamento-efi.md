@@ -381,7 +381,7 @@ Sem `revoke`/`grant` no fim — já feitos pela migration original e `create or 
 
 - [ ] **Step 3: Estender o pgTAP em `supabase/tests/0024_fn_propostas.test.sql`**
 
-Mudar `select plan(24);` (linha 2) para `select plan(26);`.
+Mudar `select plan(24);` (linha 2) para `select plan(27);` (24 originais + 3 novos — ver Step 3 abaixo).
 
 Depois da linha (atual) `select is((select valor_total from public.contratacoes where proposta_id = 'b3333333-0000-0000-0000-000000000001'), 450.00, 'valor_total = valor da proposta');`, adicionar:
 
