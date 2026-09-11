@@ -952,7 +952,7 @@ function extrairCertPem(base64P12: string): CertPem {
 
 function clienteMtls(): Deno.HttpClient {
   const cert = extrairCertPem(Deno.env.get("EFI_CERT_P12_BASE64")!);
-  return Deno.createHttpClient({ certChain: cert.certChain, privateKey: cert.privateKey });
+  return Deno.createHttpClient({ cert: cert.certChain, key: cert.privateKey }); // Deno 2.0 renomeou certChain/privateKey para cert/key
 }
 
 let tokenCache: { token: string; expiraEm: number } | null = null;
@@ -1633,4 +1633,4 @@ Ao terminar a última task, rodar o gate completo (`tsc --noEmit`, `jest`, `esli
 2. `supabase functions deploy criar-cobranca-pix efi-webhook` — primeiro deploy real.
 3. `supabase secrets set ...` (Task 14) — segredos EFI, incluindo o novo `EFI_WEBHOOK_TOKEN`.
 4. Registrar a URL do `efi-webhook` no painel EFI (webhook Pix, chave `PLATFORM_PIX_KEY`).
-5. Primeiro teste de ponta a ponta contra a sandbox de homologação EFI — validar principalmente se o `Deno.createHttpClient` com o certChain/privateKey extraídos do `.p12` via `node-forge` realmente estabelece mTLS (risco sinalizado na spec-mãe §10 e na spec deste plano §1).
+5. Primeiro teste de ponta a ponta contra a sandbox de homologação EFI — validar principalmente se o `Deno.createHttpClient({ cert, key })` com o certificado/chave extraídos do `.p12` via `node-forge` realmente estabelece mTLS (risco sinalizado na spec-mãe §10 e na spec deste plano §1).

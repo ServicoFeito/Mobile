@@ -239,8 +239,8 @@ export async function getAccessToken(): Promise<string> {
   if (tokenCache && tokenCache.expiraEm > Date.now()) return tokenCache.token;
   const cert = extrairCertPem(Deno.env.get("EFI_CERT_P12_BASE64")!, "");
   const client = Deno.createHttpClient({
-    certChain: cert.certChain,
-    privateKey: cert.privateKey,
+    cert: cert.certChain,
+    key: cert.privateKey,
   });
   const basic = btoa(`${Deno.env.get("EFI_CLIENT_ID")}:${Deno.env.get("EFI_CLIENT_SECRET")}`);
   const resp = await fetch("https://pix.api.efipay.com.br/oauth/token", {
@@ -258,7 +258,7 @@ export async function getAccessToken(): Promise<string> {
 export async function criarCobranca(txid: string, valor: number, chavePix: string) {
   const token = await getAccessToken();
   const cert = extrairCertPem(Deno.env.get("EFI_CERT_P12_BASE64")!, "");
-  const client = Deno.createHttpClient({ certChain: cert.certChain, privateKey: cert.privateKey });
+  const client = Deno.createHttpClient({ cert: cert.certChain, key: cert.privateKey });
   const resp = await fetch(`https://pix.api.efipay.com.br/v2/cob/${txid}`, {
     method: "PUT",
     client,
