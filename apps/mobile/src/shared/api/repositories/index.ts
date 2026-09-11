@@ -5,6 +5,7 @@ import { prestadoresRepositorySupabase } from "./prestadores/prestadoresReposito
 import { conversasRepositorySupabase } from "./conversas/conversasRepository.supabase";
 import { mensagensRepositorySupabase } from "./mensagens/mensagensRepository.supabase";
 import { propostasRepositorySupabase } from "./propostas/propostasRepository.supabase";
+import { contratacoesRepositorySupabase } from "./contratacoes/contratacoesRepository.supabase";
 
 export const repositories = {
   categorias: categoriasRepositorySupabase,
@@ -14,6 +15,7 @@ export const repositories = {
   conversas: conversasRepositorySupabase,
   mensagens: mensagensRepositorySupabase,
   propostas: propostasRepositorySupabase,
+  contratacoes: contratacoesRepositorySupabase,
 };
 
 export type { CategoriasRepository } from "./categorias/categoriasRepository";
@@ -23,5 +25,6 @@ export type { PrestadoresRepository } from "./prestadores/prestadoresRepository"
 export type { ConversasRepository } from "./conversas/conversasRepository";
 export type { MensagensRepository } from "./mensagens/mensagensRepository";
 export type { PropostasRepository } from "./propostas/propostasRepository";
+export type { ContratacoesRepository } from "./contratacoes/contratacoesRepository";
 export { RepoError, normalizarErro } from "./types";
 export type { CodigoRepo, PageParams, Pagina } from "./types";
