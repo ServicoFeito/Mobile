@@ -223,3 +223,37 @@ it("cancelar: erro PT401 vira nao_autorizado", async () => {
     code: "nao_autorizado",
   });
 });
+
+it("iniciarExecucao: chama a RPC fn_iniciar_execucao e resolve void", async () => {
+  const rpc = jest.spyOn(supa, "rpc").mockResolvedValue({ data: null, error: null } as never);
+
+  await expect(contratacoesRepositorySupabase.iniciarExecucao("c1")).resolves.toBeUndefined();
+  expect(rpc).toHaveBeenCalledWith("fn_iniciar_execucao", { p_contratacao_id: "c1" });
+});
+
+it("iniciarExecucao: erro PT409 vira conflito", async () => {
+  jest
+    .spyOn(supa, "rpc")
+    .mockResolvedValue({ data: null, error: { code: "PT409", message: "indisponivel" } } as never);
+
+  await expect(contratacoesRepositorySupabase.iniciarExecucao("c1")).rejects.toMatchObject({
+    code: "conflito",
+  });
+});
+
+it("concluirExecucao: chama a RPC fn_concluir_execucao e devolve o pagamento_id", async () => {
+  const rpc = jest.spyOn(supa, "rpc").mockResolvedValue({ data: "pag-1", error: null } as never);
+
+  await expect(contratacoesRepositorySupabase.concluirExecucao("c1")).resolves.toBe("pag-1");
+  expect(rpc).toHaveBeenCalledWith("fn_concluir_execucao", { p_contratacao_id: "c1" });
+});
+
+it("concluirExecucao: erro PT401 vira nao_autorizado", async () => {
+  jest
+    .spyOn(supa, "rpc")
+    .mockResolvedValue({ data: null, error: { code: "PT401", message: "nao pode" } } as never);
+
+  await expect(contratacoesRepositorySupabase.concluirExecucao("c1")).rejects.toMatchObject({
+    code: "nao_autorizado",
+  });
+});

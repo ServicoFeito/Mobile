@@ -7,4 +7,8 @@ export interface ContratacoesRepository {
   listarMinhas(usuarioId: string): Promise<Contratacao[]>;
   /** Cancela a contratação via RPC. */
   cancelar(contratacaoId: string): Promise<void>;
+  /** Inicia a execução do serviço via RPC. */
+  iniciarExecucao(contratacaoId: string): Promise<void>;
+  /** Conclui a execução do serviço via RPC. Devolve o `pagamento_id` gerado. */
+  concluirExecucao(contratacaoId: string): Promise<string>;
 }

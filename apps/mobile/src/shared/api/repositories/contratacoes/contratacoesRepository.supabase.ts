@@ -131,4 +131,27 @@ export const contratacoesRepositorySupabase: ContratacoesRepository = {
       throw normalizarErro(e);
     }
   },
+
+  async iniciarExecucao(contratacaoId: string): Promise<void> {
+    try {
+      const { error } = await supabase.rpc("fn_iniciar_execucao", {
+        p_contratacao_id: contratacaoId,
+      });
+      if (error) throw normalizarErro(error);
+    } catch (e) {
+      throw normalizarErro(e);
+    }
+  },
+
+  async concluirExecucao(contratacaoId: string): Promise<string> {
+    try {
+      const { data, error } = await supabase.rpc("fn_concluir_execucao", {
+        p_contratacao_id: contratacaoId,
+      });
+      if (error) throw normalizarErro(error);
+      return data as string;
+    } catch (e) {
+      throw normalizarErro(e);
+    }
+  },
 };
