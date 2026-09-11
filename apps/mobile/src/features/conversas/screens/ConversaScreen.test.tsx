@@ -1,6 +1,7 @@
 import { render, fireEvent } from "@testing-library/react-native";
 import type { Conversa, Mensagem } from "@/features/conversas/types/conversa.types";
 import type { Proposta } from "@/features/propostas/types/proposta.types";
+import { RepoError } from "@/shared/api/repositories";
 
 let mockAuthState: { usuarioId: string | null };
 let mockUiState: { modo: "contratar" | "prestar" };
@@ -44,7 +45,7 @@ import { useMarcarLidas } from "@/features/conversas/hooks/useMarcarLidas";
 import { useAceitarProposta } from "@/features/propostas/hooks/useAceitarProposta";
 import { useRecusarProposta } from "@/features/propostas/hooks/useRecusarProposta";
 import { router } from "expo-router";
-import { ConversaScreen } from "./ConversaScreen";
+import { ConversaScreen, erroProposta } from "./ConversaScreen";
 
 const mockRouterPush = router.push as jest.Mock;
 const mockUseConversa = useConversa as jest.Mock;
@@ -126,7 +127,13 @@ beforeEach(() => {
   recusarMutate = jest.fn();
   enviarMutate = jest.fn();
   marcarLidasMutate = jest.fn();
-  mockUseConversa.mockReturnValue({ data: conversa });
+  mockUseConversa.mockReturnValue({
+    data: conversa,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+  });
   mockUsePropostasDaConversa.mockReturnValue({ data: [] });
   mockUseMensagensInfinite.mockReturnValue(mensagensQ([]));
   mockUseEnviarTexto.mockReturnValue({ mutate: enviarMutate, isPending: false });
@@ -199,4 +206,22 @@ it("digitar no campo e pressionar Enviar chama enviar.mutate com o texto", () =>
   fireEvent.press(getByText("Enviar"));
 
   expect(enviarMutate).toHaveBeenCalledWith("ola");
+});
+
+it("cabeçalho mostra o nome do outro usuário da conversa", () => {
+  const { getByText } = render(<ConversaScreen id="a1" />);
+
+  expect(getByText("Bia")).toBeTruthy();
+});
+
+describe("erroProposta", () => {
+  it("null quando sem erro", () => expect(erroProposta(null)).toBeNull());
+  it.each([
+    ["nao_autorizado", "Só o cliente da demanda pode aceitar esta proposta."],
+    ["conflito", "Esta proposta não está mais disponível."],
+    ["nao_encontrado", "Proposta não encontrada."],
+  ] as const)("mapeia RepoError %s", (code, msg) =>
+    expect(erroProposta(new RepoError(code as never, "x"))).toBe(msg));
+  it("generico p/ não-RepoError", () =>
+    expect(erroProposta(new Error("x"))).toBe("Não foi possível concluir. Tente de novo."));
 });

@@ -65,7 +65,11 @@ begin
 
   -- idempotente: ja aceita -> devolve a contratacao existente
   if v_prop.status = 'ACEITA' then
-    return (select id from public.contratacoes where proposta_id = p_proposta_id);
+    select id into v_contratacao from public.contratacoes where proposta_id = p_proposta_id;
+    if v_contratacao is null then
+      raise exception 'contratacao_ausente' using errcode = 'PT409';
+    end if;
+    return v_contratacao;
   end if;
 
   if v_prop.status not in ('ENVIADA', 'VISUALIZADA') then

@@ -17,6 +17,13 @@ begin
     left(coalesce(nullif(new.descricao, ''), 'Proposta enviada'), 200),
     new.id
   );
+
+  if new.demanda_id is not null then
+    update public.demandas_servico
+      set total_propostas = total_propostas + 1
+      where id = new.demanda_id;
+  end if;
+
   return new;
 end;
 $$;

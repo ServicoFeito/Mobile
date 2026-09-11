@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { usePrestadorPerfil } from "@/features/prestadores/hooks/usePrestadorPerfil";
@@ -14,6 +15,7 @@ export function PrestadorPerfilScreen({ usuarioId }: { usuarioId: string }) {
   const q = usePrestadorPerfil(usuarioId);
   const usuarioAtualId = useAuthStore((s) => s.usuarioId);
   const { iniciarDireta, pendente } = useIniciarConversa();
+  const [erroConversa, setErroConversa] = useState<string | null>(null);
 
   if (q.isLoading) return <CarregandoEstado />;
   if (q.isError || !q.data) return <ErroEstado mensagem={traduzErroRepo(q.error)} onRetry={() => q.refetch()} />;
@@ -31,10 +33,16 @@ export function PrestadorPerfilScreen({ usuarioId }: { usuarioId: string }) {
             variante="secundario"
             carregando={pendente}
             onPress={async () => {
-              const r = await iniciarDireta(p.usuarioId);
-              router.push(`/conversa/${r.id}`);
+              setErroConversa(null);
+              try {
+                const r = await iniciarDireta(p.usuarioId);
+                router.push(`/conversa/${r.id}`);
+              } catch (e) {
+                setErroConversa(traduzErroRepo(e));
+              }
             }}
           />
+          {erroConversa ? <Text className="text-sf-status-red mt-2">{erroConversa}</Text> : null}
         </View>
       ) : null}
 

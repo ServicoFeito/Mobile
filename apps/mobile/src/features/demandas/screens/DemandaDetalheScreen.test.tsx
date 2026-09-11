@@ -1,5 +1,7 @@
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import type { DemandaDetalhe } from "@/features/demandas/types/demanda.types";
+import { RepoError } from "@/shared/api/repositories";
+import { traduzErroRepo } from "@/shared/lib/traduzErroRepo";
 
 jest.mock("@/features/demandas/hooks/useDemanda", () => ({
   useDemanda: jest.fn(),
@@ -66,4 +68,14 @@ it("no modo contratar não mostra o botão nem o texto placeholder antigo", () =
   const { queryByText } = render(<DemandaDetalheScreen id="dem-1" />);
   expect(queryByText("Tenho interesse")).toBeNull();
   expect(queryByText("Iniciar conversa com o cliente estará disponível em breve.")).toBeNull();
+});
+
+it("mostra erro inline e não navega quando iniciar conversa falha", async () => {
+  iniciarDemanda.mockRejectedValue(new RepoError("conflito", "x"));
+  const { getByText } = render(<DemandaDetalheScreen id="dem-1" />);
+
+  fireEvent.press(getByText("Tenho interesse"));
+
+  await waitFor(() => expect(getByText(traduzErroRepo(new RepoError("conflito", "x")))).toBeTruthy());
+  expect(router.push).not.toHaveBeenCalled();
 });

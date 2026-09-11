@@ -1,5 +1,5 @@
 begin;
-select plan(8);
+select plan(9);
 
 select tests.create_supabase_user('t1_cli');
 select tests.create_supabase_user('t1_pre');
@@ -60,6 +60,9 @@ select is(
 select is(
   (select ultima_mensagem from public.conversas where id = 'a1111111-0000-0000-0000-000000000001'),
   '💼 Proposta', 'resumo da conversa para mensagem PROPOSTA usa o rotulo por tipo');
+select is(
+  (select total_propostas from public.demandas_servico where id = 'd1111111-0000-0000-0000-000000000001'),
+  1, 'handle_new_proposta incrementa total_propostas');
 
 select * from finish();
 rollback;

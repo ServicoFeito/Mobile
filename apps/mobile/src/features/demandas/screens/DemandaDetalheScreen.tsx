@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useDemanda } from "@/features/demandas/hooks/useDemanda";
@@ -14,6 +15,7 @@ export function DemandaDetalheScreen({ id }: { id: string }) {
   const usuarioId = useAuthStore((s) => s.usuarioId);
   const modo = useUiModeStore((s) => s.modo);
   const { iniciarDemanda, pendente } = useIniciarConversa();
+  const [erroConversa, setErroConversa] = useState<string | null>(null);
   if (q.isLoading) return <CarregandoEstado />;
   if (q.isError || !q.data) return <ErroEstado mensagem={traduzErroRepo(q.error)} onRetry={() => q.refetch()} />;
 
@@ -42,10 +44,16 @@ export function DemandaDetalheScreen({ id }: { id: string }) {
             titulo="Tenho interesse"
             carregando={pendente}
             onPress={async () => {
-              const r = await iniciarDemanda(id, usuarioId ?? "");
-              router.push(`/conversa/${r.id}`);
+              setErroConversa(null);
+              try {
+                const r = await iniciarDemanda(id, usuarioId ?? "");
+                router.push(`/conversa/${r.id}`);
+              } catch (e) {
+                setErroConversa(traduzErroRepo(e));
+              }
             }}
           />
+          {erroConversa ? <Text className="text-sf-status-red mt-2">{erroConversa}</Text> : null}
         </View>
       ) : null}
     </ScrollView>

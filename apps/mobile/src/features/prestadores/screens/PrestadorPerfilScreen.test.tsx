@@ -1,5 +1,7 @@
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import type { PrestadorPerfil } from "@/features/prestadores/types/prestador.types";
+import { RepoError } from "@/shared/api/repositories";
+import { traduzErroRepo } from "@/shared/lib/traduzErroRepo";
 
 jest.mock("@/features/prestadores/hooks/usePrestadorPerfil", () => ({
   usePrestadorPerfil: jest.fn(),
@@ -65,4 +67,14 @@ it("não mostra 'Conversar' ao ver o próprio perfil", () => {
   mockUsuarioId = "prest-9";
   const { queryByText } = render(<PrestadorPerfilScreen usuarioId="prest-9" />);
   expect(queryByText("Conversar")).toBeNull();
+});
+
+it("mostra erro inline e não navega quando iniciar conversa falha", async () => {
+  iniciarDireta.mockRejectedValue(new RepoError("conflito", "x"));
+  const { getByText } = render(<PrestadorPerfilScreen usuarioId="prest-9" />);
+
+  fireEvent.press(getByText("Conversar"));
+
+  await waitFor(() => expect(getByText(traduzErroRepo(new RepoError("conflito", "x")))).toBeTruthy());
+  expect(router.push).not.toHaveBeenCalled();
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FlatList, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { useAuthStore } from "@/shared/store/authStore";
@@ -25,7 +25,7 @@ import { ContratoGeradoCard } from "@/features/propostas/components/ContratoGera
 
 const ERRO_PROPOSTA_GENERICO = "Não foi possível concluir. Tente de novo.";
 
-function erroProposta(e: unknown): string | null {
+export function erroProposta(e: unknown): string | null {
   if (!e) return null;
   if (e instanceof RepoError) {
     switch (e.code) {
@@ -76,12 +76,15 @@ export function ConversaScreen({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mensagens.length, focado]);
 
-  if (mensagensQ.isLoading) return <CarregandoEstado />;
-  if (mensagensQ.isError) {
+  if (mensagensQ.isLoading || conversaQ.isLoading) return <CarregandoEstado />;
+  if (mensagensQ.isError || conversaQ.isError) {
     return (
       <ErroEstado
-        mensagem={traduzErroRepo(mensagensQ.error)}
-        onRetry={() => mensagensQ.refetch()}
+        mensagem={traduzErroRepo(mensagensQ.error ?? conversaQ.error)}
+        onRetry={() => {
+          mensagensQ.refetch();
+          conversaQ.refetch();
+        }}
       />
     );
   }
@@ -128,6 +131,15 @@ export function ConversaScreen({ id }: { id: string }) {
 
   return (
     <View className="flex-1 bg-sf-bg">
+      <View className="flex-row items-center gap-3 px-4 py-3 border-b border-sf-outline bg-sf-bg">
+        <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={8}>
+          <Text className="text-sf-primary text-base">‹ Voltar</Text>
+        </Pressable>
+        <Text className="text-sf-text text-lg font-semibold" numberOfLines={1}>
+          {conversaQ.data?.outroNome ?? "Usuário"}
+        </Text>
+      </View>
+
       {podeEnviarProposta ? (
         <View className="px-4 py-2 border-b border-sf-outline">
           <Botao
