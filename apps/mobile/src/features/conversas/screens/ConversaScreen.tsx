@@ -117,7 +117,15 @@ export function ConversaScreen({ id }: { id: string }) {
     }
     if (item.tipo === "CONTRATO_GERADO") {
       const p = propostasQ.data?.find((x) => x.id === item.propostaId);
-      return <ContratoGeradoCard valor={p?.valor ?? 0} />;
+      return (
+        <Pressable
+          onPress={() => {
+            if (item.propostaId) router.push(`/contratacao/${item.propostaId}`);
+          }}
+        >
+          <ContratoGeradoCard valor={p?.valor ?? 0} />
+        </Pressable>
+      );
     }
     return <BolhaMensagem mensagem={item} meuId={meuId} />;
   }

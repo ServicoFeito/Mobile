@@ -182,6 +182,9 @@ it("mensagem CONTRATO_GERADO renderiza o card com o valor da proposta", () => {
 
   expect(getByText(/Contrato gerado/)).toBeTruthy();
   expect(getByText("R$ 300,00")).toBeTruthy();
+
+  fireEvent.press(getByText(/Contrato gerado/));
+  expect(mockRouterPush).toHaveBeenCalledWith("/contratacao/p1");
 });
 
 it("ação 'Enviar proposta' só aparece para o prestador no modo prestar e navega no press", () => {
