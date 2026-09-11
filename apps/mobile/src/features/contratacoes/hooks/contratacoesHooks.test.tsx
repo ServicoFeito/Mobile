@@ -3,7 +3,13 @@ import { criarWrapperQuery } from "@/test/criarWrapperQuery";
 
 jest.mock("@/shared/api/repositories", () => ({
   repositories: {
-    contratacoes: { obterPorProposta: jest.fn(), listarMinhas: jest.fn(), cancelar: jest.fn() },
+    contratacoes: {
+      obterPorProposta: jest.fn(),
+      listarMinhas: jest.fn(),
+      cancelar: jest.fn(),
+      iniciarExecucao: jest.fn(),
+      concluirExecucao: jest.fn(),
+    },
   },
 }));
 
@@ -20,6 +26,8 @@ import { queryClient } from "@/shared/query/queryClient";
 import { useContratacaoPorProposta } from "./useContratacaoPorProposta";
 import { useMinhasContratacoes } from "./useMinhasContratacoes";
 import { useCancelarContratacao } from "./useCancelarContratacao";
+import { useIniciarExecucao } from "./useIniciarExecucao";
+import { useConcluirExecucao } from "./useConcluirExecucao";
 
 let wrapper: ReturnType<typeof criarWrapperQuery>;
 
@@ -100,6 +108,68 @@ it("useCancelarContratacao em erro não invalida nada", async () => {
   const { result } = renderHook(() => useCancelarContratacao("p1", "d1"), { wrapper });
 
   result.current.mutate("ct1");
+
+  await waitFor(() => expect(result.current.isError).toBe(true));
+  expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+});
+
+it("useIniciarExecucao chama iniciarExecucao e invalida as 2 chaves relacionadas", async () => {
+  (repositories.contratacoes.iniciarExecucao as jest.Mock).mockResolvedValue(undefined);
+  const { result } = renderHook(() => useIniciarExecucao("p1"), { wrapper });
+
+  result.current.mutate("c1");
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  expect(repositories.contratacoes.iniciarExecucao).toHaveBeenCalledWith("c1");
+  expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ["contratacao", "proposta", "p1"],
+  });
+  expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ["contratacoes", "minhas"],
+  });
+  expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(2);
+});
+
+it("useIniciarExecucao em erro não invalida nada", async () => {
+  (repositories.contratacoes.iniciarExecucao as jest.Mock).mockRejectedValueOnce({
+    code: "conflito",
+  });
+  const { result } = renderHook(() => useIniciarExecucao("p1"), { wrapper });
+
+  result.current.mutate("c1");
+
+  await waitFor(() => expect(result.current.isError).toBe(true));
+  expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+});
+
+it("useConcluirExecucao chama concluirExecucao e invalida as 3 chaves relacionadas", async () => {
+  (repositories.contratacoes.concluirExecucao as jest.Mock).mockResolvedValue("pag-1");
+  const { result } = renderHook(() => useConcluirExecucao("p1"), { wrapper });
+
+  result.current.mutate("c1");
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  expect(repositories.contratacoes.concluirExecucao).toHaveBeenCalledWith("c1");
+  expect(result.current.data).toBe("pag-1");
+  expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ["contratacao", "proposta", "p1"],
+  });
+  expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ["contratacoes", "minhas"],
+  });
+  expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ["pagamento", "pendente"],
+  });
+  expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(3);
+});
+
+it("useConcluirExecucao em erro não invalida nada", async () => {
+  (repositories.contratacoes.concluirExecucao as jest.Mock).mockRejectedValueOnce({
+    code: "conflito",
+  });
+  const { result } = renderHook(() => useConcluirExecucao("p1"), { wrapper });
+
+  result.current.mutate("c1");
 
   await waitFor(() => expect(result.current.isError).toBe(true));
   expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
