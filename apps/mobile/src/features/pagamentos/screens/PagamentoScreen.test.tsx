@@ -75,6 +75,12 @@ it("pagamento PENDENTE: dispara criarCobranca.mutate uma única vez no mount, me
   mockUsePagamentoPendente.mockReturnValue({ data: pendente, isLoading: false });
 
   const { rerender } = render(<PagamentoScreen contratacaoId="ct1" />);
+
+  // Simula um refetch do react-query: novo objeto (referência diferente),
+  // mesmos valores de campo — é exatamente o caso que o guard de useRef
+  // precisa cobrir (um `[data]` no deps do useEffect sozinho não bastaria).
+  const pendenteRefetch = mkPagamento({ status: "PENDENTE" });
+  mockUsePagamentoPendente.mockReturnValue({ data: pendenteRefetch, isLoading: false });
   rerender(<PagamentoScreen contratacaoId="ct1" />);
 
   expect(criarCobrancaMutate).toHaveBeenCalledTimes(1);
