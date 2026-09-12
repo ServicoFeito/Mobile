@@ -33,6 +33,22 @@ Nenhuma bloqueia os Planos 2–5. As de pagamento bloqueiam o Plano 6.
       (`EFI_CLIENT_ID`, `EFI_CLIENT_SECRET`, `EFI_CERT_P12_BASE64`, `EFI_WEBHOOK_TOKEN`,
       `PLATFORM_PIX_KEY`). Nunca no repositório.
 
+## Secrets EFI (Plano 6)
+
+- [ ] **Após merge do Plano 6**, executar:
+      ```bash
+      supabase secrets set \
+        EFI_CLIENT_ID=... EFI_CLIENT_SECRET=... \
+        EFI_CERT_P12_BASE64="$(base64 -w0 caminho/para/homologacao.p12)" \
+        EFI_WEBHOOK_TOKEN=... PLATFORM_PIX_KEY=app.servicofeito@gmail.com
+      ```
+      - Valores `EFI_CLIENT_ID`, `EFI_CLIENT_SECRET`, `homologacao.p12`: os mesmos já vazados no
+        repo Kotlin (`docs/arquitetura-antiga/.../EfiConfig.kt`). **Não rotacionar** — decisão
+        registrada acima.
+      - `EFI_WEBHOOK_TOKEN`: valor **novo**, não existia no app Kotlin. Gerar um token aleatório
+        qualquer no momento de registrar a URL do webhook no painel EFI e inserir aqui.
+      - `PLATFORM_PIX_KEY`: chave Pix da conta EFI (exemplo: `app.servicofeito@gmail.com`).
+
 ## Schema tests (pgTAP)
 
 **STATUS 2026-09-09:** o schema `tests` FOI para o prod (o `db push` aplicou
