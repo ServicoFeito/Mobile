@@ -7,7 +7,7 @@ import { RepoError } from "@/shared/api/repositories";
 let mockAuthState: { usuarioId: string | null };
 
 jest.mock("expo-router", () => ({
-  router: { back: jest.fn() },
+  router: { back: jest.fn(), push: jest.fn() },
 }));
 jest.mock("@/shared/store/authStore", () => ({
   useAuthStore: (sel: (s: unknown) => unknown) => sel(mockAuthState),
@@ -25,17 +25,33 @@ jest.mock("@/features/tarefas/hooks/useTarefasDaDemanda", () => ({
 jest.mock("@/features/tarefas/hooks/useMarcarTarefaConcluida", () => ({
   useMarcarTarefaConcluida: jest.fn(),
 }));
+jest.mock("@/features/pagamentos/hooks/usePagamentoPendente", () => ({
+  usePagamentoPendente: jest.fn(),
+}));
+jest.mock("@/features/contratacoes/hooks/useIniciarExecucao", () => ({
+  useIniciarExecucao: jest.fn(),
+}));
+jest.mock("@/features/contratacoes/hooks/useConcluirExecucao", () => ({
+  useConcluirExecucao: jest.fn(),
+}));
 
 import { useContratacaoPorProposta } from "@/features/contratacoes/hooks/useContratacaoPorProposta";
 import { useCancelarContratacao } from "@/features/contratacoes/hooks/useCancelarContratacao";
 import { useTarefasDaDemanda } from "@/features/tarefas/hooks/useTarefasDaDemanda";
 import { useMarcarTarefaConcluida } from "@/features/tarefas/hooks/useMarcarTarefaConcluida";
+import { usePagamentoPendente } from "@/features/pagamentos/hooks/usePagamentoPendente";
+import { useIniciarExecucao } from "@/features/contratacoes/hooks/useIniciarExecucao";
+import { useConcluirExecucao } from "@/features/contratacoes/hooks/useConcluirExecucao";
+import { router } from "expo-router";
 import { ContratacaoScreen, erroContratacao } from "./ContratacaoScreen";
 
 const mockUseContratacaoPorProposta = useContratacaoPorProposta as jest.Mock;
 const mockUseCancelarContratacao = useCancelarContratacao as jest.Mock;
 const mockUseTarefasDaDemanda = useTarefasDaDemanda as jest.Mock;
 const mockUseMarcarTarefaConcluida = useMarcarTarefaConcluida as jest.Mock;
+const mockUsePagamentoPendente = usePagamentoPendente as jest.Mock;
+const mockUseIniciarExecucao = useIniciarExecucao as jest.Mock;
+const mockUseConcluirExecucao = useConcluirExecucao as jest.Mock;
 
 const contratacao: Contratacao = {
   id: "ct1",
@@ -72,12 +88,16 @@ const mkTarefa = (o: Partial<Tarefa>): Tarefa => ({
 
 let cancelarMutate: jest.Mock;
 let marcarTarefaMutate: jest.Mock;
+let iniciarMutate: jest.Mock;
+let concluirMutate: jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockAuthState = { usuarioId: "c1" };
   cancelarMutate = jest.fn();
   marcarTarefaMutate = jest.fn();
+  iniciarMutate = jest.fn();
+  concluirMutate = jest.fn();
 
   mockUseContratacaoPorProposta.mockReturnValue({
     data: contratacao,
@@ -93,6 +113,9 @@ beforeEach(() => {
   });
   mockUseTarefasDaDemanda.mockReturnValue({ data: [] });
   mockUseMarcarTarefaConcluida.mockReturnValue({ mutate: marcarTarefaMutate });
+  mockUsePagamentoPendente.mockReturnValue({ data: null });
+  mockUseIniciarExecucao.mockReturnValue({ mutate: iniciarMutate, isPending: false, error: null });
+  mockUseConcluirExecucao.mockReturnValue({ mutate: concluirMutate, isPending: false, error: null });
 });
 
 it("AGUARDANDO_PAGAMENTO: mostra 'Cancelar contratação' e o fluxo de confirmação chama cancelar.mutate(id)", () => {
@@ -166,6 +189,98 @@ it("erro de cancelamento (conflito) mostra a mensagem traduzida", () => {
   const { getByText } = render(<ContratacaoScreen id="p1" />);
 
   expect(getByText("Esta contratação não pode mais ser cancelada.")).toBeTruthy();
+});
+
+it("cliente com pagamento pendente ENTRADA: mostra 'Pagar entrada' e navega pro pagamento", () => {
+  mockUsePagamentoPendente.mockReturnValue({ data: { id: "pg1", tipo: "ENTRADA" } });
+
+  const { getByText } = render(<ContratacaoScreen id="p1" />);
+
+  const botao = getByText("Pagar entrada");
+  expect(botao).toBeTruthy();
+  fireEvent.press(botao);
+
+  expect(router.push).toHaveBeenCalledWith("/pagamento/ct1");
+});
+
+it("cliente com pagamento pendente FINAL: mostra 'Pagar final'", () => {
+  mockUsePagamentoPendente.mockReturnValue({ data: { id: "pg1", tipo: "FINAL" } });
+
+  const { getByText } = render(<ContratacaoScreen id="p1" />);
+
+  expect(getByText("Pagar final")).toBeTruthy();
+});
+
+it("cliente sem pagamento pendente: nenhum botão de pagar", () => {
+  mockUsePagamentoPendente.mockReturnValue({ data: null });
+
+  const { queryByText } = render(<ContratacaoScreen id="p1" />);
+
+  expect(queryByText("Pagar entrada")).toBeNull();
+  expect(queryByText("Pagar final")).toBeNull();
+});
+
+it("prestador, status AGENDADA: mostra 'Iniciar serviço' e chama iniciar.mutate(id)", () => {
+  mockAuthState = { usuarioId: "pr1" }; // = contratacao.prestadorId
+  mockUseContratacaoPorProposta.mockReturnValue({
+    data: { ...contratacao, status: "AGENDADA" },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+  });
+
+  const { getByText } = render(<ContratacaoScreen id="p1" />);
+
+  const botao = getByText("Iniciar serviço");
+  expect(botao).toBeTruthy();
+  fireEvent.press(botao);
+
+  expect(iniciarMutate).toHaveBeenCalledWith("ct1");
+});
+
+it("prestador, status EM_ANDAMENTO, sem pagamento pendente: mostra 'Finalizar serviço' e chama concluir.mutate(id)", () => {
+  mockAuthState = { usuarioId: "pr1" };
+  mockUseContratacaoPorProposta.mockReturnValue({
+    data: { ...contratacao, status: "EM_ANDAMENTO" },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+  });
+  mockUsePagamentoPendente.mockReturnValue({ data: null });
+
+  const { getByText } = render(<ContratacaoScreen id="p1" />);
+
+  const botao = getByText("Finalizar serviço");
+  expect(botao).toBeTruthy();
+  fireEvent.press(botao);
+
+  expect(concluirMutate).toHaveBeenCalledWith("ct1");
+});
+
+it("prestador, status EM_ANDAMENTO, com pagamento pendente (final processando): nenhum botão de ação", () => {
+  mockAuthState = { usuarioId: "pr1" };
+  mockUseContratacaoPorProposta.mockReturnValue({
+    data: { ...contratacao, status: "EM_ANDAMENTO" },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+  });
+  mockUsePagamentoPendente.mockReturnValue({ data: { id: "pg1", tipo: "FINAL" } });
+
+  const { queryByText } = render(<ContratacaoScreen id="p1" />);
+
+  expect(queryByText("Finalizar serviço")).toBeNull();
+  expect(queryByText("Iniciar serviço")).toBeNull();
+});
+
+it("AGUARDANDO_PAGAMENTO: botão Cancelar continua visível e o aviso antigo de pagamento não existe mais", () => {
+  const { getByText, queryByText } = render(<ContratacaoScreen id="p1" />);
+
+  expect(getByText("Cancelar contratação")).toBeTruthy();
+  expect(queryByText("Pagamento estará disponível em breve.")).toBeNull();
 });
 
 describe("erroContratacao", () => {

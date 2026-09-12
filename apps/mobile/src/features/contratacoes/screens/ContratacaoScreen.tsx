@@ -13,6 +13,9 @@ import { useCancelarContratacao } from "@/features/contratacoes/hooks/useCancela
 import { useTarefasDaDemanda } from "@/features/tarefas/hooks/useTarefasDaDemanda";
 import { useMarcarTarefaConcluida } from "@/features/tarefas/hooks/useMarcarTarefaConcluida";
 import { TarefaRow } from "@/features/tarefas/components/TarefaRow";
+import { usePagamentoPendente } from "@/features/pagamentos/hooks/usePagamentoPendente";
+import { useIniciarExecucao } from "@/features/contratacoes/hooks/useIniciarExecucao";
+import { useConcluirExecucao } from "@/features/contratacoes/hooks/useConcluirExecucao";
 
 const ERRO_CONTRATACAO_GENERICO = "Não foi possível concluir. Tente de novo.";
 
@@ -41,6 +44,9 @@ export function ContratacaoScreen({ id }: { id: string }) {
   const tarefasQ = useTarefasDaDemanda(c?.demandaId ?? "");
   const marcarTarefa = useMarcarTarefaConcluida(c?.demandaId ?? "");
   const cancelar = useCancelarContratacao(id, c?.demandaId ?? null);
+  const pendenteQ = usePagamentoPendente(c?.id ?? "");
+  const iniciar = useIniciarExecucao(id);
+  const concluir = useConcluirExecucao(id);
 
   if (cq.isLoading) return <CarregandoEstado />;
   if (cq.isError || !c) {
@@ -79,7 +85,6 @@ export function ContratacaoScreen({ id }: { id: string }) {
 
         {c.status === "AGUARDANDO_PAGAMENTO" ? (
           <View className="mt-6">
-            <Text className="text-sf-muted text-sm mb-3">Pagamento estará disponível em breve.</Text>
             <Botao
               titulo="Cancelar contratação"
               variante="perigo"
@@ -88,6 +93,41 @@ export function ContratacaoScreen({ id }: { id: string }) {
             />
             {erroContratacao(cancelar.error) ? (
               <Text className="text-sf-status-red mt-2">{erroContratacao(cancelar.error)}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {souCliente && pendenteQ.data ? (
+          <View className="mt-6">
+            <Botao
+              titulo={pendenteQ.data.tipo === "ENTRADA" ? "Pagar entrada" : "Pagar final"}
+              onPress={() => router.push(`/pagamento/${c.id}`)}
+            />
+          </View>
+        ) : null}
+
+        {!souCliente && c.status === "AGENDADA" ? (
+          <View className="mt-6">
+            <Botao
+              titulo="Iniciar serviço"
+              carregando={iniciar.isPending}
+              onPress={() => iniciar.mutate(c.id)}
+            />
+            {erroContratacao(iniciar.error) ? (
+              <Text className="text-sf-status-red mt-2">{erroContratacao(iniciar.error)}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {!souCliente && c.status === "EM_ANDAMENTO" && !pendenteQ.data ? (
+          <View className="mt-6">
+            <Botao
+              titulo="Finalizar serviço"
+              carregando={concluir.isPending}
+              onPress={() => concluir.mutate(c.id)}
+            />
+            {erroContratacao(concluir.error) ? (
+              <Text className="text-sf-status-red mt-2">{erroContratacao(concluir.error)}</Text>
             ) : null}
           </View>
         ) : null}
