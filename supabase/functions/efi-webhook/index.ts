@@ -2,8 +2,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
-  const token = url.pathname.split("/").pop();
-  if (token !== Deno.env.get("EFI_WEBHOOK_TOKEN")) {
+  const tokenEsperado = Deno.env.get("EFI_WEBHOOK_TOKEN");
+  const segmentos = url.pathname.split("/").filter(Boolean);
+  if (!tokenEsperado || !segmentos.includes(tokenEsperado)) {
     return new Response("not found", { status: 404 });
   }
 
@@ -20,6 +21,8 @@ Deno.serve(async (req) => {
   }
   const itens: Array<{ txid: string }> = body.pix ?? [];
 
+  let algumFalhou = false;
+
   for (const item of itens) {
     const { data: pagamento } = await service
       .from("pagamentos")
@@ -28,28 +31,45 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!pagamento || pagamento.status === "PAGO") continue;
 
-    await service
+    // Registra o pagamento como PAGO incondicionalmente -- a EFI ja recebeu o
+    // dinheiro, isso precisa ficar registrado mesmo que o contrato tenha sido
+    // cancelado nesse meio-tempo (reconciliacao/estorno manual fica pro time
+    // de operacao, fora do escopo deste endpoint).
+    const { error: errPagUpdate } = await service
       .from("pagamentos")
       .update({ status: "PAGO", data_pagamento: new Date().toISOString() })
       .eq("id", pagamento.id);
+    if (errPagUpdate) {
+      algumFalhou = true;
+      continue;
+    }
 
     const { data: contratacao } = await service
       .from("contratacoes")
-      .select("id, cliente_id, prestador_id, proposta_id")
+      .select("id, cliente_id, prestador_id, proposta_id, status")
       .eq("id", pagamento.contratacao_id)
       .single();
-    if (!contratacao) continue;
+    if (!contratacao) {
+      algumFalhou = true;
+      continue;
+    }
 
+    // Guard: só avanca o STATUS do contrato se ele ainda estiver no estado
+    // esperado pra essa transicao. Um contrato ja CANCELADA (cancelado depois
+    // do QR ter sido gerado, mas antes do Pix cair) fica CANCELADA -- o
+    // pagamento fica registrado acima, mas o contrato nao "ressuscita".
     if (pagamento.txid.startsWith("SFENT")) {
       await service
         .from("contratacoes")
         .update({ entrada_paga: true, status: "AGENDADA" })
-        .eq("id", contratacao.id);
+        .eq("id", contratacao.id)
+        .eq("status", "AGUARDANDO_PAGAMENTO");
     } else if (pagamento.txid.startsWith("SFFIN")) {
       await service
         .from("contratacoes")
         .update({ final_pago: true, status: "CONCLUIDA" })
-        .eq("id", contratacao.id);
+        .eq("id", contratacao.id)
+        .eq("status", "EM_ANDAMENTO");
     }
 
     const { data: proposta } = await service
@@ -85,5 +105,5 @@ Deno.serve(async (req) => {
     ]);
   }
 
-  return new Response("ok", { status: 200 });
+  return new Response(algumFalhou ? "erro parcial" : "ok", { status: algumFalhou ? 500 : 200 });
 });

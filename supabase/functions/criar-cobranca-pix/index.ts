@@ -42,12 +42,14 @@ Deno.serve(async (req) => {
 
   const { data: contratacao, error: errContr } = await service
     .from("contratacoes")
-    .select("id, cliente_id")
+    .select("id, cliente_id, status")
     .eq("id", pagamento.contratacao_id)
     .single();
   if (errContr || !contratacao) return erro("nao_encontrado", 404);
 
   if (contratacao.cliente_id !== usuarioId) return erro("nao_autorizado", 401);
+
+  if (contratacao.status === "CANCELADA") return erro("conflito", 409);
 
   if (pagamento.status === "PAGO") return erro("conflito", 409);
 
@@ -67,7 +69,7 @@ Deno.serve(async (req) => {
   const txid = (prefixo + String(pagamento.id).replace(/-/g, "")).slice(0, 35);
 
   try {
-    const cob = await criarCobranca(txid, pagamento.valor, Deno.env.get("PLATFORM_PIX_KEY")!);
+    const cob = await criarCobranca(txid, Number(pagamento.valor), Deno.env.get("PLATFORM_PIX_KEY")!);
 
     await service
       .from("pagamentos")
