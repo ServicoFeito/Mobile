@@ -80,14 +80,35 @@ it("criarCobranca invoca a edge function e relê a linha atualizada", async () =
   expect(r.status).toBe("PROCESSANDO");
 });
 
-it("criarCobranca: erro da function rejeita via normalizarErro", async () => {
-  const invoke = jest
-    .fn()
-    .mockResolvedValue({ data: null, error: { code: "PT409", message: "conflito" } });
+it("criarCobranca: erro da function (FunctionsHttpError com corpo JSON) mapeia pelo code real", async () => {
+  const invoke = jest.fn().mockResolvedValue({
+    data: null,
+    error: {
+      name: "FunctionsHttpError",
+      message: "Edge Function returned a non-2xx status code",
+      context: { json: async () => ({ error: { code: "conflito" } }) },
+    },
+  });
   jest.spyOn(supa, "functions", "get").mockReturnValue({ invoke } as never);
 
   await expect(pagamentosRepositorySupabase.criarCobranca("pg1")).rejects.toMatchObject({
     code: "conflito",
+  });
+});
+
+it("criarCobranca: erro 502 gateway_indisponivel mapeia corretamente", async () => {
+  const invoke = jest.fn().mockResolvedValue({
+    data: null,
+    error: {
+      name: "FunctionsHttpError",
+      message: "Edge Function returned a non-2xx status code",
+      context: { json: async () => ({ error: { code: "gateway_indisponivel" } }) },
+    },
+  });
+  jest.spyOn(supa, "functions", "get").mockReturnValue({ invoke } as never);
+
+  await expect(pagamentosRepositorySupabase.criarCobranca("pg1")).rejects.toMatchObject({
+    code: "gateway_indisponivel",
   });
 });
 

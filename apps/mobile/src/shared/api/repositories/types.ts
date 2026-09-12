@@ -5,6 +5,7 @@ export type CodigoRepo =
   | "conflito"
   | "validacao"
   | "rede"
+  | "gateway_indisponivel"
   | "desconhecido";
 
 export class RepoError extends Error {
@@ -35,6 +36,7 @@ const MENSAGEM: Record<CodigoRepo, string> = {
   conflito: "Isso já existe.",
   validacao: "Dados inválidos. Revise e tente de novo.",
   rede: "Sem conexão. Verifique a internet e tente de novo.",
+  gateway_indisponivel: "Não foi possível conectar ao gateway de pagamento. Tente de novo.",
   desconhecido: "Algo deu errado. Tente de novo.",
 };
 
@@ -64,4 +66,16 @@ export function normalizarErro(e: unknown): RepoError {
   if (e instanceof RepoError) return e;
   const code = classificar(e);
   return new RepoError(code, MENSAGEM[code], e);
+}
+
+/**
+ * Constrói um RepoError a partir de um código já no formato final (o que as
+ * Edge Functions deste projeto mandam em `{ error: { code } }` — diferente
+ * das RPCs, que mandam SQLSTATE cru e passam por `classificar()`). Código
+ * desconhecido cai em "desconhecido".
+ */
+export function repoErrorDeCodigo(code: unknown): RepoError {
+  const chaves = Object.keys(MENSAGEM) as CodigoRepo[];
+  const c = typeof code === "string" && (chaves as string[]).includes(code) ? (code as CodigoRepo) : "desconhecido";
+  return new RepoError(c, MENSAGEM[c]);
 }

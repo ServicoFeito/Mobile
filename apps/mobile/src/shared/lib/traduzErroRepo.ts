@@ -7,6 +7,7 @@ const TEXTO: Record<CodigoRepo, string> = {
   nao_autenticado: "Sua sessão expirou. Entre de novo.",
   conflito: "Isso já existe.",
   validacao: "Dados inválidos. Revise e tente de novo.",
+  gateway_indisponivel: "Não foi possível conectar ao gateway de pagamento. Tente de novo.",
   desconhecido: "Algo deu errado. Tente de novo.",
 };
 

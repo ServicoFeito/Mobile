@@ -4,6 +4,11 @@ import { RepoError } from "@/shared/api/repositories";
 
 const mockRouterBack = jest.fn();
 const mockClipboardSetStringAsync = jest.fn();
+const mockInvalidateQueries = jest.fn();
+
+jest.mock("@/shared/query/queryClient", () => ({
+  queryClient: { invalidateQueries: (o: unknown) => mockInvalidateQueries(o) },
+}));
 
 jest.mock("expo-router", () => ({
   router: { back: () => mockRouterBack() },
@@ -144,8 +149,26 @@ it("erro na criação da cobrança: mostra erroPagamento(...) e 'Tentar de novo'
   expect(criarCobrancaMutate).toHaveBeenCalledWith("pg1");
 });
 
+it("status PAGO: invalida os caches de pagamento pendente e de contratações", () => {
+  const pendente = mkPagamento({ status: "PENDENTE" });
+  mockUsePagamentoPendente.mockReturnValue({ data: pendente, isLoading: false });
+  mockUsePagamentoStatus.mockReturnValue({
+    data: mkPagamento({ status: "PAGO" }),
+    isLoading: false,
+  });
+
+  render(<PagamentoScreen contratacaoId="ct1" />);
+
+  expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["pagamento", "pendente"] });
+  expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["contratacoes", "minhas"] });
+});
+
 describe("erroPagamento", () => {
   it("null quando sem erro", () => expect(erroPagamento(null)).toBeNull());
+  it("mensagem especifica p/ gateway_indisponivel", () =>
+    expect(erroPagamento(new RepoError("gateway_indisponivel", "x"))).toBe(
+      "Não foi possível gerar o pagamento agora. Tente de novo.",
+    ));
   it("genérico p/ RepoError", () =>
     expect(erroPagamento(new RepoError("conflito", "x"))).toBe(
       "Não foi possível concluir. Tente de novo.",

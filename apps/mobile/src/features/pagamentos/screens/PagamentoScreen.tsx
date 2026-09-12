@@ -5,6 +5,7 @@ import * as Clipboard from "expo-clipboard";
 import { RepoError } from "@/shared/api/repositories";
 import { Botao } from "@/shared/components/atoms/Botao";
 import { CarregandoEstado } from "@/shared/components/molecules/CarregandoEstado";
+import { queryClient } from "@/shared/query/queryClient";
 import { usePagamentoPendente } from "@/features/pagamentos/hooks/usePagamentoPendente";
 import { useCriarCobranca } from "@/features/pagamentos/hooks/useCriarCobranca";
 import { usePagamentoStatus } from "@/features/pagamentos/hooks/usePagamentoStatus";
@@ -14,6 +15,9 @@ const ERRO_PAGAMENTO_GENERICO = "Não foi possível concluir. Tente de novo.";
 export function erroPagamento(e: unknown): string | null {
   if (!e) return null;
   if (e instanceof RepoError) {
+    if (e.code === "gateway_indisponivel") {
+      return "Não foi possível gerar o pagamento agora. Tente de novo.";
+    }
     return ERRO_PAGAMENTO_GENERICO;
   }
   return ERRO_PAGAMENTO_GENERICO;
@@ -27,6 +31,7 @@ export function PagamentoScreen({ contratacaoId }: { contratacaoId: string }) {
 
   const pagamentoIdInicial = pendenteQ.data?.id ?? null;
   const statusQ = usePagamentoStatus(pagamentoIdInicial);
+  const pagamentoAtual = statusQ.data ?? pendenteQ.data ?? null;
 
   useEffect(() => {
     if (disparado.current) return;
@@ -36,6 +41,13 @@ export function PagamentoScreen({ contratacaoId }: { contratacaoId: string }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendenteQ.data]);
+
+  useEffect(() => {
+    if (pagamentoAtual?.status === "PAGO") {
+      queryClient.invalidateQueries({ queryKey: ["pagamento", "pendente"] });
+      queryClient.invalidateQueries({ queryKey: ["contratacoes", "minhas"] });
+    }
+  }, [pagamentoAtual?.status]);
 
   if (pendenteQ.isLoading) return <CarregandoEstado />;
 
@@ -48,7 +60,7 @@ export function PagamentoScreen({ contratacaoId }: { contratacaoId: string }) {
     );
   }
 
-  const pagamento = statusQ.data ?? pendenteQ.data;
+  const pagamento = pagamentoAtual!;
 
   if (pagamento.status === "PAGO") {
     return (

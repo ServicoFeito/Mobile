@@ -2,7 +2,7 @@ import { supabase } from "@/shared/api/supabaseClient";
 import type { Database } from "@servico-feito/db-types";
 import type { Pagamento } from "@/features/pagamentos/types/pagamento.types";
 import type { PagamentosRepository } from "./pagamentosRepository";
-import { normalizarErro } from "../types";
+import { normalizarErro, repoErrorDeCodigo } from "../types";
 
 type LinhaPagamento = Database["public"]["Tables"]["pagamentos"]["Row"];
 
@@ -27,6 +27,25 @@ function paraPagamento(l: LinhaPagamento): Pagamento {
     dataPagamento: l.data_pagamento,
     createdAt: l.created_at,
   };
+}
+
+/**
+ * `supabase.functions.invoke` erra com um `FunctionsHttpError` (`{ name, message,
+ * context: Response }`) — nao tem `.code`. O corpo real (`{ error: { code } }`,
+ * ja no formato final que as Edge Functions deste projeto mandam) esta em
+ * `error.context`, uma Response que precisa ser lida com `.json()`.
+ */
+async function erroDaEdgeFunction(error: unknown): Promise<import("../types").RepoError> {
+  const ctx = (error as { context?: { json?: () => Promise<unknown> } } | null)?.context;
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = (await ctx.json()) as { error?: { code?: unknown } };
+      return repoErrorDeCodigo(body?.error?.code);
+    } catch {
+      // corpo nao-JSON (ex.: falha de rede antes da function responder) -- cai no generico abaixo
+    }
+  }
+  return normalizarErro(error);
 }
 
 export const pagamentosRepositorySupabase: PagamentosRepository = {
@@ -54,7 +73,7 @@ export const pagamentosRepositorySupabase: PagamentosRepository = {
       const { error } = await supabase.functions.invoke("criar-cobranca-pix", {
         body: { pagamento_id: pagamentoId },
       });
-      if (error) throw normalizarErro(error);
+      if (error) throw await erroDaEdgeFunction(error);
 
       return await pagamentosRepositorySupabase.obterPorId(pagamentoId);
     } catch (e) {
