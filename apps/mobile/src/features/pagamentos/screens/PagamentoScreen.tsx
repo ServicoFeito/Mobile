@@ -51,6 +51,20 @@ export function PagamentoScreen({ contratacaoId }: { contratacaoId: string }) {
 
   if (pendenteQ.isLoading) return <CarregandoEstado />;
 
+  // Checado ANTES do "nada pendente": confirmar o pagamento invalida
+  // ["pagamento","pendente",...] (Fix #6), e o refetch derruba pendenteQ.data
+  // pra null -- sem essa ordem, a tela de sucesso vira "Nada pendente pra
+  // pagar." segundos depois de confirmar (statusQ.data, que não é invalidado
+  // por essa chave, continua com o pagamento PAGO em cache).
+  if (pagamentoAtual?.status === "PAGO") {
+    return (
+      <View className="flex-1 bg-sf-bg items-center justify-center px-6">
+        <Text className="text-sf-text text-xl font-bold mb-2">Pagamento confirmado!</Text>
+        <Botao titulo="Voltar" onPress={() => router.back()} />
+      </View>
+    );
+  }
+
   if (!pendenteQ.data) {
     return (
       <View className="flex-1 bg-sf-bg items-center justify-center px-6">
@@ -61,15 +75,6 @@ export function PagamentoScreen({ contratacaoId }: { contratacaoId: string }) {
   }
 
   const pagamento = pagamentoAtual!;
-
-  if (pagamento.status === "PAGO") {
-    return (
-      <View className="flex-1 bg-sf-bg items-center justify-center px-6">
-        <Text className="text-sf-text text-xl font-bold mb-2">Pagamento confirmado!</Text>
-        <Botao titulo="Voltar" onPress={() => router.back()} />
-      </View>
-    );
-  }
 
   async function copiarCodigo() {
     if (!pagamento.pixCopiaCola) return;
