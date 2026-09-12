@@ -48,6 +48,19 @@ Nenhuma bloqueia os Planos 2–5. As de pagamento bloqueiam o Plano 6.
       - `EFI_WEBHOOK_TOKEN`: valor **novo**, não existia no app Kotlin. Gerar um token aleatório
         qualquer no momento de registrar a URL do webhook no painel EFI e inserir aqui.
       - `PLATFORM_PIX_KEY`: chave Pix da conta EFI (exemplo: `app.servicofeito@gmail.com`).
+- [ ] **Ao registrar a URL do webhook no painel EFI**, registrar ela exatamente como
+      `.../functions/v1/efi-webhook/<EFI_WEBHOOK_TOKEN>` — sem barra no fim. Atenção: na
+      hora de *entregar* a notificação, a EFI acrescenta `/pix` no fim da URL registrada
+      (`.../efi-webhook/<token>/pix`). O código tolera os dois formatos (compara o token
+      com qualquer segmento do path), mas o registro esperado continua sendo a URL sem o
+      `/pix`.
+- [ ] **mTLS:** por padrão a EFI exige mTLS na entrega do webhook, e as Edge Functions da
+      Supabase não conseguem servir o lado receptor dessa negociação. No momento de
+      registrar o webhook é preciso enviar o header `x-skip-mtls-checking: true` (ou a
+      configuração de proxy equivalente da EFI). Sem isso a EFI **nunca** consegue
+      entregar notificação nenhuma e o pagamento fica preso em `PROCESSANDO` pra sempre.
+      Fonte: documentação de webhook da própria EFI + relatos da comunidade — confirmar o
+      nome/mecanismo exato na documentação vigente na hora de registrar.
 
 ## Schema tests (pgTAP)
 
